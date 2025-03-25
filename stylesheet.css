@@ -1,0 +1,150 @@
+/* General layout */
+.container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Columns */
+.column {
+    width: 30%;
+    min-width: 250px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Buttons */
+button {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Table Buttons */
+.tableButton {
+    background: #007AFF;
+    color: white;
+}
+
+.tableButton:hover {
+    background: #005EC2;
+}
+
+
+/* Report Buttons */
+.reportButton {
+    background: #28A745;
+    color: white;
+}
+
+.reportButton:hover {
+    background: #218838;
+}
+
+/* Export button styling */
+#exportButton {
+    background-color: #ffc107; /* Yellow color */
+    color: black;
+    border: none;
+    padding: 10px 20px;
+    display: none;
+    width: 30%;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    white-space: nowrap;
+    margin-left: 5px; /* Adds spacing between heading and button */
+}
+
+#exportButton:hover {
+    background-color: #e0a800; /* Darker yellow for hover effect */
+}
+
+/* right align container */
+.r-align {
+    display: flex;
+    justify-content: flex-end; /* Push everything to the right */
+}
+
+/* Button container */
+.btnContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Ensures 3 equal columns */
+    gap: 1px;
+    width: fit-content; /* Prevents grid from stretching */
+}
+
+/* Remove Button */
+.removeButton {
+    background: #DC3545;
+    color: white;
+    width: 33%;
+    padding: 5px 10px;
+    font-size: 20px;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 5px;
+    display: flex;
+}
+
+.removeButton:hover {
+    background: #C82333;
+}
+
+/* Navigation Button */
+.navButton {
+    background: #CCCCCC;
+    color: black;
+    width: 33%;
+    padding: 5px 10px;
+    font-size: 20px;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 5px;
+    display: flex;
+}
+
+.spacer {
+    visibility: hidden;
+    width: 33%;
+    padding: 5px 10px;
+    font-size: 20px;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 5px;
+    display: flex;
+}
+
+.navButton:hover {
+    background: #8E8E8E;
+}
+
+/* Ordered list styling */
+ol {
+    padding: 0;
+    list-style: none;
+}
+
+ol li {
+    background: white;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}

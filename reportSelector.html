@@ -1,0 +1,182 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="/db/bt559cn65?a=dbpage&pagename=qbAPI.js"></script>
+<link rel="stylesheet" href="/db/bt559cn65?a=dbpage&pagename=stylesheet.css"> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<div class="container">
+    <!-- Column 1: Tables -->
+    <div class="column">
+        <h2>Click a Table to find reports</h2>
+        <div id="tableContainer"></div>
+    </div>
+
+    <!-- Column 2: Reports -->
+    <div class="column">
+        <h2>Click to add report to export</h2>
+        <div id="reportContainer"></div>
+    </div>
+
+    <!-- Column 3: Selected Reports -->
+    <div class="column" id="selectedReportsContainer">
+        <h2>Final Export <button id="exportButton">Export to Excel</button></h2>
+        <ol id="selectedReports"></ol>
+    </div>
+</div>
+
+
+
+<script>
+
+let selectedReports = [];
+
+async function fetchTables() {
+    const realm = window.location.href.split("/")[2];
+    const appID = window.location.href.split("/")[4].split("?")[0];
+    const data = await getTables(appID, realm);
+    const tableContainer = document.getElementById("tableContainer");
+    tableContainer.innerHTML = "";
+    
+    data.forEach(table => {
+        const button = document.createElement("button");
+        button.textContent = table.name;
+        button.classList.add("tableButton");
+        button.onclick = () => fetchReports({"name": table.name, "id": table.id});
+        tableContainer.appendChild(button);
+    });
+}
+
+async function fetchReports(dbid) {
+    const realm = window.location.href.split("/")[2];
+    const data = await getReports(dbid.id, realm);
+    const reportContainer = document.getElementById("reportContainer");
+    reportContainer.innerHTML = "";
+
+    data.forEach(report => {
+        const button = document.createElement("button");
+        button.textContent = dbid.name + ": " + report.name + " ("+ report.id +")";
+        button.classList.add("reportButton");
+        button.onclick = () => addReport({"report": report, "table": dbid});
+        reportContainer.appendChild(button);
+    });
+    
+}
+
+function toggleExportButton() {
+    const exportButton = document.getElementById("exportButton");
+
+    if (selectedReports.length === 0) {
+        exportButton.style.display = "none"; // Hide the button if the array is empty
+    } else {
+        exportButton.style.display = "inline-block"; // Show the button if there are selected reports
+    }
+}
+
+// Add report to the final selection
+function addReport(reportName) {
+    if (!selectedReports.includes(reportName)) {
+        selectedReports.push(reportName);
+        updateSelectedReports();
+    }
+    toggleExportButton();
+}
+
+// Update final selection list
+function updateSelectedReports() {
+    const selectedList = document.getElementById("selectedReports");
+    selectedList.innerHTML = ""; // Clear previous list
+
+    selectedReports.forEach((report, index) => {
+        const li = document.createElement("li");
+        //dbid.name + ": " + report.name + " ("+ report.id +")"
+        li.textContent = report.table.name + ": " + report.report.name + " (" + report.report.id + ")";
+
+        const ralign = document.createElement("div");
+        ralign.classList.add("r-align");
+        
+        const div = document.createElement("div");
+        div.classList.add("btnContainer");
+        
+        const spaceru = document.createElement("button");
+        spaceru.classList.add("spacer");
+
+        const spacerd = document.createElement("button");
+        spacerd.classList.add("spacer");
+
+        //Move Up Buttons
+        const upBtn = document.createElement("button");
+        upBtn.innerHTML = "&uarr;";
+        upBtn.classList.add("navButton");
+        upBtn.onclick = () => {
+            [selectedReports[index-1], selectedReports[index]] = [selectedReports[index], selectedReports[index-1]];
+            updateSelectedReports();
+        };
+        if( (index !== 0) && (selectedReports.length > 1)) {
+            div.appendChild(upBtn);
+        } else {
+            div.appendChild(spaceru);
+        }
+
+
+        // Remove button
+        const removeBtn = document.createElement("button");
+        removeBtn.innerHTML = "&times;";
+        removeBtn.classList.add("removeButton");
+        removeBtn.onclick = () => {
+            selectedReports.splice(index, 1);
+            updateSelectedReports();
+            toggleExportButton();
+        };
+        
+        div.appendChild(removeBtn);
+
+        //Move Down Button
+        const downBtn = document.createElement("button");
+        downBtn.innerHTML = "&darr;";
+        downBtn.classList.add("navButton");
+        downBtn.onclick = () => {
+            [selectedReports[index], selectedReports[index+1]] = [selectedReports[index+1], selectedReports[index]];
+            updateSelectedReports();
+        };
+        if( index < selectedReports.length-1) {
+            div.appendChild(downBtn);
+        } else {
+            div.appendChild(spacerd);
+        }
+
+        ralign.appendChild(div);
+        li.appendChild(ralign);
+        selectedList.appendChild(li);
+    });
+}
+
+// Initial load
+//window.onload = () => {
+    fetchTables();
+//};
+
+
+document.getElementById("exportButton").addEventListener("click", async function () {
+
+    const realm = window.location.href.split("/")[2];
+    const wb = XLSX.utils.book_new(); // Create a new workbook
+    const fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport")
+
+    for (let i = 0; i < selectedReports.length; i++) {
+            
+        const data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm);
+        const xdata = transformData(data);
+        const ws = XLSX.utils.aoa_to_sheet(xdata); 
+        //report.table.name + " - " + report.report.name + " (" + report.report.id + ")"
+        let sheetName = selectedReports[i].table.name + " - " + selectedReports[i].report.name + " (" + selectedReports[i].report.id + ")";
+        //prep sheetname for excel
+        sheetName = sheetName.slice(0,31).replace(/[\/:*?"<>|]/g, '').trim();
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        
+    }
+
+    // Write the Excel file to the browser
+    XLSX.writeFile(wb, fileName+'.xlsx');
+
+});
+
+</script>
