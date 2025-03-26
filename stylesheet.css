@@ -71,13 +71,13 @@ button {
 }
 
 /* right align container */
-.r-align {
+r-align {
     display: flex;
     justify-content: flex-end; /* Push everything to the right */
 }
 
 /* Button container */
-.btnContainer {
+btnContainer {
     display: grid;
     grid-template-columns: repeat(3, 1fr); /* Ensures 3 equal columns */
     gap: 1px;
@@ -85,12 +85,12 @@ button {
 }
 
 /* Remove Button */
-.removeButton {
-    background: #DC3545;
-    color: white;
+removeButton {
+    background-color: #DC3545;
+    color: #DC3545;
     width: 33%;
     padding: 5px 10px;
-    font-size: 20px;
+    font-size: 50px;
     align-items: center;  /* Ensure icon is centered */
     justify-content: center;
     font-weight: bold;
@@ -99,24 +99,28 @@ button {
 }
 
 .removeButton:hover {
-    background: #C82333;
+    background-color: #C82333;
 }
 
 /* Navigation Button */
-.navButton {
+navButton {
     background: #CCCCCC;
     color: black;
     width: 33%;
     padding: 5px 10px;
-    font-size: 20px;
+    font-size: 50px;
     align-items: center;  /* Ensure icon is centered */
     justify-content: center;
-    font-weight: bold;
+    font-weight: bolder;
     border-radius: 5px;
     display: flex;
 }
 
-.spacer {
+.navButton:hover {
+    background: #8E8E8E;
+}
+
+spacer {
     visibility: hidden;
     width: 33%;
     padding: 5px 10px;
@@ -126,10 +130,6 @@ button {
     font-weight: bold;
     border-radius: 5px;
     display: flex;
-}
-
-.navButton:hover {
-    background: #8E8E8E;
 }
 
 /* Ordered list styling */

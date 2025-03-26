@@ -28,6 +28,8 @@
 <script>
 
 let selectedReports = [];
+let appTables = [];
+let tableReports = [];
 
 async function fetchTables() {
     const realm = window.location.href.split("/")[2];
@@ -36,13 +38,36 @@ async function fetchTables() {
     const tableContainer = document.getElementById("tableContainer");
     tableContainer.innerHTML = "";
     
-    data.forEach(table => {
+    /*data.forEach(table => {
+        const button = document.createElement("button");
+        button.textContent = table.name;
+        button.classList.add("tableButton");
+        button.onclick = () => fetchReports({"name": table.name, "id": table.id});
+        tableContainer.appendChild(button);
+    });*/
+    let pageSize = 10;
+    for( let i = 0; i < data.length; i+=pageSize){
+
+        appTables.push(data.slice(i, i+pageSize));
+
+    }
+
+    updateTableDisplay(0);
+}
+
+function updateTableDisplay(index){
+
+    appTables[index].forEach(table => {
         const button = document.createElement("button");
         button.textContent = table.name;
         button.classList.add("tableButton");
         button.onclick = () => fetchReports({"name": table.name, "id": table.id});
         tableContainer.appendChild(button);
     });
+
+    const pgContainer = document.createElement("div");
+
+
 }
 
 async function fetchReports(dbid) {
@@ -119,7 +144,7 @@ function updateSelectedReports() {
 
         // Remove button
         const removeBtn = document.createElement("button");
-        removeBtn.innerHTML = "&times;";
+        removeBtn.innerHTML = "&#10060;";
         removeBtn.classList.add("removeButton");
         removeBtn.onclick = () => {
             selectedReports.splice(index, 1);
