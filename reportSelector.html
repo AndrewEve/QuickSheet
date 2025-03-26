@@ -1,5 +1,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="/db/bt559cn65?a=dbpage&pagename=qbAPI.js"></script>
 <link rel="stylesheet" href="/db/bt559cn65?a=dbpage&pagename=stylesheet.css"> 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -51,7 +50,6 @@ async function fetchTables() {
 }
 
 function updateTableDisplay(index){
-
     tableContainer.innerHTML = "";
 
     appTables[index].forEach(table => {
@@ -62,47 +60,93 @@ function updateTableDisplay(index){
         tableContainer.appendChild(button);
     });
 
-    const pgContainer = document.createElement("div");
-    pgContainer.classList.add("pgContainer");
-    const pgHeader = document.createElement("div");
-    pgHeader.textContent = "Pages";
+    if (appTables.length > 1) {
+        const pgContainer = document.createElement("div");
+        pgContainer.classList.add("pgContainer");
+        const pgHeader = document.createElement("div");
+        pgHeader.textContent = "Pages";
 
-	for (let i = 0; i < appTables.length; i++) {
+        for (let i = 0; i < appTables.length; i++) {
 
-            if  (i !== index)   {
-            const pg = document.createElement("button");
-            pg.classList.add("pgBtn");
-            pg.textContent = i;
-            pg.onclick = () => updateTableDisplay(i);
-            pgContainer.appendChild(pg);
-        } else {
-            const pg = document.createElement("button");
-            pg.classList.add("pgBtnInactive");
-            pg.textContent = i;
-            pgContainer.appendChild(pg);
+                if  (i !== index)   {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtn");
+                pg.textContent = i+1;
+                pg.onclick = () => updateTableDisplay(i);
+                pgContainer.appendChild(pg);
+            } else {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtnInactive");
+                pg.textContent = i+1;
+                pgContainer.appendChild(pg);
+            }
+
         }
 
+        tableContainer.appendChild(pgHeader);
+        tableContainer.appendChild(pgContainer);
     }
-
-    tableContainer.appendChild(pgHeader);
-    tableContainer.appendChild(pgContainer);
-
 }
 
 async function fetchReports(dbid) {
+
+    tableReports.splice(0, tableReports.length);
     const realm = window.location.href.split("/")[2];
     const data = await getReports(dbid.id, realm);
     const reportContainer = document.getElementById("reportContainer");
     reportContainer.innerHTML = "";
 
-    data.forEach(report => {
+    let pageSize = 10;
+    sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    
+    for( let i = 0; i < sortedData.length; i+=pageSize){
+
+        tableReports.push(sortedData.slice(i, i+pageSize));
+
+    }
+
+    updateReportDisplay(0, dbid);
+    
+}
+
+function updateReportDisplay(index, dbid){
+
+    reportContainer.innerHTML = "";
+
+    tableReports[index].forEach(report => {
         const button = document.createElement("button");
         button.textContent = dbid.name + ": " + report.name + " ("+ report.id +")";
         button.classList.add("reportButton");
         button.onclick = () => addReport({"report": report, "table": dbid});
         reportContainer.appendChild(button);
     });
-    
+
+    if (tableReports.length > 1) {
+        const pgContainer = document.createElement("div");
+        pgContainer.classList.add("pgContainer");
+        const pgHeader = document.createElement("div");
+        pgHeader.textContent = "Pages";
+
+        for (let i = 0; i < tableReports.length; i++) {
+
+                if  (i !== index)   {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtn");
+                pg.textContent = i+1;
+                pg.onclick = () => updateReportDisplay(i, dbid);
+                pgContainer.appendChild(pg);
+            } else {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtnInactive");
+                pg.textContent = i+1;
+                pgContainer.appendChild(pg);
+            }
+
+        }
+
+        reportContainer.appendChild(pgHeader);
+        reportContainer.appendChild(pgContainer);
+    }
 }
 
 function toggleExportButton() {
