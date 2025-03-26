@@ -237,6 +237,7 @@ function updateSelectedReports() {
         li.appendChild(ralign);
         selectedList.appendChild(li);
     });
+
 }
 
 // Initial load
@@ -249,7 +250,23 @@ document.getElementById("exportButton").addEventListener("click", async function
 
     const realm = window.location.href.split("/")[2];
     const wb = XLSX.utils.book_new(); // Create a new workbook
-    const fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport")
+    const fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+    let upsertBody = { 
+        "to": "buzibgj77",
+        "data": [
+            {
+                "6": { "value": fileName }
+            }
+        ],
+        "fieldsToReturn": [
+            3
+        ]
+    };
+    let exportRid = await upsert("buzibgj77", realm, upsertBody);
+    console.log(exportRid);
+    exportRid = exportRid.data[0]['3'].value;
+
+    tabData = [];
 
     for (let i = 0; i < selectedReports.length; i++) {
             
@@ -261,11 +278,25 @@ document.getElementById("exportButton").addEventListener("click", async function
         //prep sheetname for excel
         sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        
+        tabData.push({
+            "6":  { "value": i },
+            "7":  { "value": selectedReports[i].report.name },
+            "8":  { "value": selectedReports[i].report.id },
+            "9":  { "value": selectedReports[i].table.id },
+            "10": { "value": selectedReports[i].table.name },
+            "11": { "value": exportRid }
+        })
     }
 
+    upsertBody = {
+        "to": "buzibjrm3",
+        "data": tabData
+    }
+    upsert("buzibjrm3", realm, upsertBody);
     // Write the Excel file to the browser
     XLSX.writeFile(wb, fileName+'.xlsx');
+    
+
 
 });
 

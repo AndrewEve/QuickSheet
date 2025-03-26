@@ -152,6 +152,32 @@ async function getReports(dbid, realm) {
     }
 }
 
+async function upsert(dbid, realm, data) {
+    try {
+        const url = "https://api.quickbase.com/v1/records";
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                },
+                body: JSON.stringify(data)
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
 function transformData(json){
 
     // Extract headers (field labels)
