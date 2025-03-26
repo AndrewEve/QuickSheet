@@ -38,17 +38,12 @@ async function fetchTables() {
     const tableContainer = document.getElementById("tableContainer");
     tableContainer.innerHTML = "";
     
-    /*data.forEach(table => {
-        const button = document.createElement("button");
-        button.textContent = table.name;
-        button.classList.add("tableButton");
-        button.onclick = () => fetchReports({"name": table.name, "id": table.id});
-        tableContainer.appendChild(button);
-    });*/
     let pageSize = 10;
-    for( let i = 0; i < data.length; i+=pageSize){
+    sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    
+    for( let i = 0; i < sortedData.length; i+=pageSize){
 
-        appTables.push(data.slice(i, i+pageSize));
+        appTables.push(sortedData.slice(i, i+pageSize));
 
     }
 
@@ -56,6 +51,8 @@ async function fetchTables() {
 }
 
 function updateTableDisplay(index){
+
+    tableContainer.innerHTML = "";
 
     appTables[index].forEach(table => {
         const button = document.createElement("button");
@@ -66,7 +63,29 @@ function updateTableDisplay(index){
     });
 
     const pgContainer = document.createElement("div");
+    pgContainer.classList.add("pgContainer");
+    const pgHeader = document.createElement("div");
+    pgHeader.textContent = "Pages";
 
+	for (let i = 0; i < appTables.length; i++) {
+
+            if  (i !== index)   {
+            const pg = document.createElement("button");
+            pg.classList.add("pgBtn");
+            pg.textContent = i;
+            pg.onclick = () => updateTableDisplay(i);
+            pgContainer.appendChild(pg);
+        } else {
+            const pg = document.createElement("button");
+            pg.classList.add("pgBtnInactive");
+            pg.textContent = i;
+            pgContainer.appendChild(pg);
+        }
+
+    }
+
+    tableContainer.appendChild(pgHeader);
+    tableContainer.appendChild(pgContainer);
 
 }
 
@@ -123,9 +142,11 @@ function updateSelectedReports() {
         
         const spaceru = document.createElement("button");
         spaceru.classList.add("spacer");
+        spaceru.innerHTML = "&#10060;";
 
         const spacerd = document.createElement("button");
         spacerd.classList.add("spacer");
+        spacerd.innerHTML = "&#10060;";
 
         //Move Up Buttons
         const upBtn = document.createElement("button");
@@ -194,7 +215,7 @@ document.getElementById("exportButton").addEventListener("click", async function
         //report.table.name + " - " + report.report.name + " (" + report.report.id + ")"
         let sheetName = selectedReports[i].table.name + " - " + selectedReports[i].report.name + " (" + selectedReports[i].report.id + ")";
         //prep sheetname for excel
-        sheetName = sheetName.slice(0,31).replace(/[\/:*?"<>|]/g, '').trim();
+        sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
         
     }
