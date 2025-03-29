@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickSheet Create</title>
+</head>
+<div visibility="hidden" class="container">
+    <!-- Column 1: Tables -->
+    <div class="column">
+        <h2>Click a Table to find reports</h2>
+        <div id="tableContainer"></div>
+    </div>
+
+    <!-- Column 2: Reports -->
+    <div class="column">
+        <h2>Available Reports to Add</h2>
+        <ol id="reportContainer"></ol>
+    </div>
+
+    <!-- Column 3: Selected Reports -->
+    <div class="column" id="selectedReportsContainer">
+        <h2>Final Export <button id="exportButton">Export to Excel</button></h2>
+        <ol id="selectedReports"></ol>
+    </div>
+</div>
+<script>
+
+    const appID = window.location.href.split("/")[4].split("?")[0];
+    let loadCounter = 0;
+    
+    let linkElement = document.createElement("link");
+    linkElement.rel = "stylesheet";
+    linkElement.type = 'text/css';
+    linkElement.href = `/db/${appID}?a=dbpage&pagename=stylesheet.css`;
+
+    let qbAPI = document.createElement("script");
+    qbAPI.src = `/db/${appID}?a=dbpage&pagename=qbAPI.js`;
+    qbAPI.type = 'text/javascript';
+
+    let schemas = document.createElement("script");
+    schemas.src = `/db/${appID}?a=dbpage&pagename=quickSheetTableSchema.js`;
+    schemas.type = 'text/javascript';
+
+   
+    document.head.appendChild(linkElement);
+    document.head.appendChild(qbAPI);
+    document.head.appendChild(schemas);
+
+let selectedReports = [];
+let appTables = [];
+let tableReports = [];
+
+async function fetchTables() {
+    const realm = window.location.href.split("/")[2];
+    const data = await getTables(appID, realm);
+    const tableContainer = document.getElementById("tableContainer");
+    tableContainer.innerHTML = "";
+    
+    let pageSize = 15;
+    sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    
+    for( let i = 0; i < sortedData.length; i+=pageSize){
+
+        appTables.push(sortedData.slice(i, i+pageSize));
+
+    }
+
+    updateTableDisplay(0);
+}
+
+function updateTableDisplay(index){
+    tableContainer.innerHTML = "";
+
+    appTables[index].forEach(table => {
+        const button = document.createElement("button");
+        button.textContent = table.name;
+        button.classList.add("tableButton");
+        button.onclick = () => fetchReports({"name": table.name, "id": table.id});
+        tableContainer.appendChild(button);
+    });
+
+    if (appTables.length > 1) {
+        const pgContainer = document.createElement("div");
+        pgContainer.classList.add("pgContainer");
+        const pgHeader = document.createElement("div");
+        pgHeader.textContent = "Pages";
+
+        for (let i = 0; i < appTables.length; i++) {
+
+                if  (i !== index)   {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtn");
+                pg.textContent = i+1;
+                pg.onclick = () => updateTableDisplay(i);
+                pgContainer.appendChild(pg);
+            } else {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtnInactive");
+                pg.textContent = i+1;
+                pgContainer.appendChild(pg);
+            }
+
+        }
+
+        tableContainer.appendChild(pgHeader);
+        tableContainer.appendChild(pgContainer);
+    }
+}
+
+async function fetchReports(dbid) {
+    const tableContainer = document.getElementById("tableContainer");
+    tableContainer.classList.add("disabled");
+    
+    tableReports.splice(0, tableReports.length);
+    const realm = window.location.href.split("/")[2];
+    const data = await getReports(dbid.id, realm);
+    const reportContainer = document.getElementById("reportContainer");
+    reportContainer.innerHTML = "";
+
+    let pageSize = 8;
+    sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    
+    for( let i = 0; i < sortedData.length; i+=pageSize){
+
+        tableReports.push(sortedData.slice(i, i+pageSize));
+
+    }
+
+    updateReportDisplay(0, dbid);
+    
+}
+
+function updateReportDisplay(index, dbid){
+    const tableContainer = document.getElementById("tableContainer");
+    tableContainer.classList.add("disabled");
+    reportContainer.innerHTML = "";
+
+    tableReports[index].forEach(report => {
+        const li = document.createElement("li");
+        li.textContent = dbid.name + ": " + report.name + " ("+ report.id +")";
+
+        const repDiv = document.createElement("div");
+        repDiv.classList.add("r-align");
+
+        const btnContainer = document.createElement("div");
+        btnContainer.classList.add("btnContainer");
+
+        const addBtn = document.createElement("button");
+        addBtn.classList.add("add");
+        addBtn.textContent = "Add";
+        addBtn.onclick = () => addReport({"report": report, "table": dbid});            
+    
+        const viewBtn = document.createElement("button");        
+        viewBtn.classList.add("view");
+        viewBtn.textContent = "View";
+        viewBtn.onclick = () => window.open("/db/"+dbid.id+"?a=q&qid="+report.id,'_blank');
+
+        btnContainer.appendChild(viewBtn);
+        btnContainer.appendChild(addBtn);
+        repDiv.appendChild(btnContainer);
+        li.appendChild(repDiv);
+        reportContainer.appendChild(li);
+        tableContainer.classList.remove("disabled");
+    });
+
+    if (tableReports.length > 1) {
+        const pgContainer = document.createElement("div");
+        pgContainer.classList.add("pgContainer");
+        const pgHeader = document.createElement("div");
+        pgHeader.textContent = "Pages";
+
+        for (let i = 0; i < tableReports.length; i++) {
+
+                if  (i !== index)   {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtn");
+                pg.textContent = i+1;
+                pg.onclick = () => updateReportDisplay(i, dbid);
+                pgContainer.appendChild(pg);
+            } else {
+                const pg = document.createElement("button");
+                pg.classList.add("pgBtnInactive");
+                pg.textContent = i+1;
+                pgContainer.appendChild(pg);
+            }
+
+        }
+
+        reportContainer.appendChild(pgHeader);
+        reportContainer.appendChild(pgContainer);
+    }
+}
+
+function toggleExportButton() {
+    const exportButton = document.getElementById("exportButton");
+
+    if (selectedReports.length === 0) {
+        exportButton.style.display = "none"; // Hide the button if the array is empty
+    } else {
+        exportButton.style.display = "inline-block"; // Show the button if there are selected reports
+    }
+}
+
+// Add report to the final selection
+function addReport(reportName) {
+    if (!selectedReports.includes(reportName)) {
+        selectedReports.push(reportName);
+        updateSelectedReports();
+    }
+    toggleExportButton();
+}
+
+// Update final selection list
+function updateSelectedReports() {
+    const selectedList = document.getElementById("selectedReports");
+    selectedList.innerHTML = ""; // Clear previous list
+
+    selectedReports.forEach((report, index) => {
+        const li = document.createElement("li");
+        //dbid.name + ": " + report.name + " ("+ report.id +")"
+        li.textContent = report.table.name + ": " + report.report.name + " (" + report.report.id + ")";
+
+        const ralign = document.createElement("div");
+        ralign.classList.add("r-align");
+        
+        const div = document.createElement("div");
+        div.classList.add("btnContainer");
+        
+        const spaceru = document.createElement("button");
+        spaceru.classList.add("spacer");
+        spaceru.innerHTML = "&#10060;";
+
+        const spacerd = document.createElement("button");
+        spacerd.classList.add("spacer");
+        spacerd.innerHTML = "&#10060;";
+
+        //Move Up Buttons
+        const upBtn = document.createElement("button");
+        upBtn.innerHTML = "&uarr;";
+        upBtn.classList.add("navButton");
+        upBtn.onclick = () => {
+            [selectedReports[index-1], selectedReports[index]] = [selectedReports[index], selectedReports[index-1]];
+            updateSelectedReports();
+        };
+        if( (index !== 0) && (selectedReports.length > 1)) {
+            div.appendChild(upBtn);
+        } else {
+            div.appendChild(spaceru);
+        }
+
+
+        // Remove button
+        const removeBtn = document.createElement("button");
+        removeBtn.innerHTML = "&#10060;";
+        removeBtn.classList.add("removeButton");
+        removeBtn.onclick = () => {
+            selectedReports.splice(index, 1);
+            updateSelectedReports();
+            toggleExportButton();
+        };
+        
+        div.appendChild(removeBtn);
+
+        //Move Down Button
+        const downBtn = document.createElement("button");
+        downBtn.innerHTML = "&darr;";
+        downBtn.classList.add("navButton");
+        downBtn.onclick = () => {
+            [selectedReports[index], selectedReports[index+1]] = [selectedReports[index+1], selectedReports[index]];
+            updateSelectedReports();
+        };
+        if( index < selectedReports.length-1) {
+            div.appendChild(downBtn);
+        } else {
+            div.appendChild(spacerd);
+        }
+
+        ralign.appendChild(div);
+        li.appendChild(ralign);
+        selectedList.appendChild(li);
+    });
+
+}
+
+document.getElementById("exportButton").addEventListener("click", async function () {
+
+    document.getElementById("exportButton").disabled = true;    
+    const realm = window.location.href.split("/")[2];
+    const wb = XLSX.utils.book_new(); // Create a new workbook
+    let fileName;
+    do{
+        fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+        if (fileName === null) {
+            document.getElementById("exportButton").disabled = false;   
+            return;
+        } else if (fileName.trim() === "") {
+            alert("Input cannot be empty. Please enter a valid name.");
+        }
+    } while (!fileName || fileName.trim() === "");
+
+    let upsertBody = { 
+        "to": "buzibgj77",
+        "data": [
+            {
+                "6": { "value": fileName }
+            }
+        ],
+        "fieldsToReturn": [
+            3
+        ]
+    };
+    let exportRid = await upsert("buzibgj77", realm, upsertBody);
+    exportRid = exportRid.data[0]['3'].value;
+
+    tabData = [];
+
+    for (let i = 0; i < selectedReports.length; i++) {
+            
+        const data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm);
+        const xdata = transformData(data);
+        const ws = XLSX.utils.aoa_to_sheet(xdata); 
+        //report.table.name + " - " + report.report.name + " (" + report.report.id + ")"
+        let sheetName = selectedReports[i].table.name + " - " + selectedReports[i].report.name + " (" + selectedReports[i].report.id + ")";
+        //prep sheetname for excel
+        sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        tabData.push({
+            "6":  { "value": i },
+            "7":  { "value": selectedReports[i].report.name },
+            "8":  { "value": selectedReports[i].report.id },
+            "9":  { "value": selectedReports[i].table.id },
+            "10": { "value": selectedReports[i].table.name },
+            "11": { "value": exportRid }
+        })
+    }
+
+    upsertBody = {
+        "to": "buzibjrm3",
+        "data": tabData
+    }
+    upsert("buzibjrm3", realm, upsertBody);
+    // Write the Excel file to the browser
+    XLSX.writeFile(wb, fileName+'.xlsx');
+    
+    document.getElementById("exportButton").disabled = false;    
+
+});
+
+function main(){
+    if (loadCounter === 3) {
+        fetchTables();
+    }
+    
+}
+
+linkElement.onload = () => {
+    
+    loadCounter++;
+
+    let mainContainer = document.getElementById("container");
+    mainContainer.setAttribute("visibility","visible");
+
+    main();
+}
+
+qbAPI.onload = () => {
+       
+    loadCounter++;
+    main();
+}
+
+schemas.onload = () => {
+    loadCounter++;
+    main();
+}
+
+</script>
+
+</html>

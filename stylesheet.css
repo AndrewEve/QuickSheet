@@ -17,21 +17,16 @@
     text-align: center;
 }
 
-/* Buttons */
-button {
+/* Table Buttons */
+.tableButton {
     display: block;
     width: 100%;
     margin: 5px 0;
     padding: 10px;
     border: none;
     border-radius: 6px;
-    font-size: 16px;
     cursor: pointer;
     transition: 0.3s;
-}
-
-/* Table Buttons */
-.tableButton {
     background: #007AFF;
     color: white;
 }
@@ -42,13 +37,77 @@ button {
 
 
 /* Report Buttons */
-.reportButton {
-    background: #28A745;
-    color: white;
+.add {
+    padding: 5px 15px;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.3s;
+    background: #CCCCCC;
+    color: black;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    border-radius: 6px;
+    display: flex;    
 }
 
-.reportButton:hover {
-    background: #218838;
+.add:hover {
+    background: #57db7d;
+}
+
+.view {
+    padding: 5px 15px;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.3s;
+    background: #CCCCCC;
+    color: black;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    border-radius: 6px;
+    display: flex;    
+}
+
+.view:hover {
+    background: #fce069;
+}
+
+/* Pagination container */
+.pgContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); /* Dynamic column sizing */
+  gap: 10px;
+  width: max-content; /* Ensures buttons don’t stretch too much */
+  max-width: 100%; /* Prevents overflow */
+  margin: 0 auto; /* Centers the container */
+  padding: 10px;
+}
+
+.pgBtn {
+  text-align: center;
+  padding: 5px 10px;
+  background-color: #CCCCCC;
+  color: black;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+  min-width: 50px; /* Ensures buttons don’t shrink too much */
+}
+
+.pgBtn:hover {
+  background-color: #8E8E8E;
+}
+
+.pgBtnInactive {
+  text-align: center;
+  padding: 5px 10px;
+  background-color: #8E8E8E;
+  color: black;
+  border: none;
+  border-radius: 6px;
+  min-width: 50px; /* Ensures buttons don’t shrink too much */
 }
 
 /* Export button styling */
@@ -79,57 +138,67 @@ button {
 /* Button container */
 .btnContainer {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Ensures 3 equal columns */
-    gap: 1px;
-    width: fit-content; /* Prevents grid from stretching */
+    grid-template-rows: repeat(3,lfr);
+    gap: 3px;
+    width: fit-content;
 }
 
 /* Remove Button */
 .removeButton {
-    background: #DC3545;
-    color: white;
     width: 33%;
-    padding: 5px 10px;
-    font-size: 20px;
+    padding: 5px 15px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.3s;
+    background: #CCCCCC;
+    color: black;
     align-items: center;  /* Ensure icon is centered */
     justify-content: center;
-    font-weight: bold;
-    border-radius: 5px;
+    font-weight: bolder;
+    border-radius: 6px;
     display: flex;
 }
 
 .removeButton:hover {
-    background: #C82333;
+    background-color: #C82333;
 }
 
 /* Navigation Button */
 .navButton {
+    width: 33%;
+    padding: 5px 15px;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.3s;
     background: #CCCCCC;
     color: black;
-    width: 33%;
-    padding: 5px 10px;
-    font-size: 20px;
     align-items: center;  /* Ensure icon is centered */
     justify-content: center;
-    font-weight: bold;
-    border-radius: 5px;
-    display: flex;
-}
-
-.spacer {
-    visibility: hidden;
-    width: 33%;
-    padding: 5px 10px;
-    font-size: 20px;
-    align-items: center;  /* Ensure icon is centered */
-    justify-content: center;
-    font-weight: bold;
-    border-radius: 5px;
+    border-radius: 6px;
     display: flex;
 }
 
 .navButton:hover {
     background: #8E8E8E;
+}
+
+.spacer {
+    visibility: hidden;
+    width: 33%;
+    padding: 5px 15px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.3s;
+    background: #CCCCCC;
+    color: black;
+    align-items: center;  /* Ensure icon is centered */
+    justify-content: center;
+    font-weight: bolder;
+    border-radius: 6px;
+    display: flex;
 }
 
 /* Ordered list styling */
@@ -143,6 +212,7 @@ ol li {
     margin: 5px 0;
     padding: 10px;
     border-radius: 6px;
+    font-size: 18px;
     box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
