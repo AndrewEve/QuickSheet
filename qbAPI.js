@@ -52,7 +52,38 @@ async function queryData(dbid, fields, filter, realm) {
     }
 }
 
-async function runReport(dbid, reportID, realm) {
+async function runReport(dbid, reportID, realm, fullReport = true, skip = 0, data = []) {
+    try {
+        const url = "https://api.quickbase.com/v1/reports/"+reportID+"/run?tableId="+dbid+"&skip="+skip;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                }
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+        
+        const json = await response.json();
+        let currCount = json.metadata.numRecords + skip;
+        if((currCount) >= (json.metadata.totalRecords) || !fullReport) {
+            json.data = data.concat(json.data);
+            return json;
+        } else {
+            return runReport(dbid, reportID, realm, pBar, pLabel, currCount, data.concat(json.data));
+        }
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+/*async function runReport(dbid, reportID, realm) {
     try {
         const url = "https://api.quickbase.com/v1/reports/"+reportID+"/run?tableId="+dbid;
         const token = await tempToken(dbid, realm);
@@ -75,32 +106,7 @@ async function runReport(dbid, reportID, realm) {
     } catch (error) {
         console.error(error.message);
     }
-}
-
-async function runReport(dbid, reportID, realm) {
-    try {
-        const url = "https://api.quickbase.com/v1/reports/"+reportID+"/run?tableId="+dbid;
-        const token = await tempToken(dbid, realm);
-        const response = await fetch(url,
-            {
-                method: "POST",
-                headers: {
-                    "QB-Realm-Hostname": realm,
-                    "Content-Type": "application/json",
-                    "Authorization": "QB-TEMP-TOKEN " + token
-                }
-            }
-        );
-        if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-        }
-
-        const json = await response.json();
-        return json;
-    } catch (error) {
-        console.error(error.message);
-    }
-}
+}*/
 
 async function getTables(dbid, realm) {
     try {

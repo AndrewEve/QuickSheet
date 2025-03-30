@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QuickSheet Create</title>
 </head>
-<div visibility="hidden" class="container">
+<style>
+.container {
+      display: none;
+    }
+</style>
+<div class="container">
     <!-- Column 1: Tables -->
     <div class="column">
         <h2>Click a Table to find reports</h2>
@@ -38,8 +43,8 @@
     qbAPI.src = `/db/${appID}?a=dbpage&pagename=qbAPI.js`;
     qbAPI.type = 'text/javascript';
 
-    let schemas = document.createElement("script");
-    schemas.src = `/db/${appID}?a=dbpage&pagename=quickSheetTableSchema.js`;
+    let schemas = document.createElement("script")
+    schemas.src = `/db/${appID}?a=dbpage&pagename=config.js`;
     schemas.type = 'text/javascript';
 
    
@@ -283,9 +288,14 @@ function updateSelectedReports() {
 
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 document.getElementById("exportButton").addEventListener("click", async function () {
 
     document.getElementById("exportButton").disabled = true;    
+    
     const realm = window.location.href.split("/")[2];
     const wb = XLSX.utils.book_new(); // Create a new workbook
     let fileName;
@@ -300,51 +310,85 @@ document.getElementById("exportButton").addEventListener("click", async function
     } while (!fileName || fileName.trim() === "");
 
     let upsertBody = { 
-        "to": "buzibgj77",
+        "to": quickSheetSchema.tableID,
         "data": [
             {
-                "6": { "value": fileName }
+                [quickSheetSchema.fid.name]: { "value": fileName }
             }
         ],
         "fieldsToReturn": [
             3
         ]
     };
-    let exportRid = await upsert("buzibgj77", realm, upsertBody);
+    
+    let exportRid = await upsert(quickSheetSchema.tableID, realm, upsertBody);
+    
     exportRid = exportRid.data[0]['3'].value;
 
     tabData = [];
 
+    const oList = document.getElementById("selectedReports");
+
     for (let i = 0; i < selectedReports.length; i++) {
-            
-        const data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm);
+        
+        const progressBar = document.createElement("progress");
+        progressBar.value = 0;
+        progressBar.max = 100;
+        progressBar.classList.add("progress-bar");
+
+        const progressLabel = document.createElement("span");
+        progressLabel.classList.add("progress-label");
+        progressLabel.textContent = "Loading Report: 0%";
+
+        oList.children[i].appendChild(progressBar);
+        oList.children[i].appendChild(progressLabel);
+
+        let skip = 0;
+        let data = {"data":[]};
+        let count = 0;
+        let totalRecords = 1;
+        do{
+
+        data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm, false, skip, data.data);
+        totalRecords = data.metadata.totalRecords;
+        skip += data.metadata.numRecords;
+        progressBar.value = totalRecords === 0 ? 1 : Math.round((skip/totalRecords)*100);
+        progressLabel.textContent = `Loading Report: ${progressBar.value}%`;
+        count++;
+        }while((skip < data.metadata.totalRecords) && (count < 10));
+
+        progressLabel.textContent = "Report Loaded Successfully!";
         const xdata = transformData(data);
         const ws = XLSX.utils.aoa_to_sheet(xdata); 
-        //report.table.name + " - " + report.report.name + " (" + report.report.id + ")"
+
         let sheetName = selectedReports[i].table.name + " - " + selectedReports[i].report.name + " (" + selectedReports[i].report.id + ")";
         //prep sheetname for excel
         sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
+               
+        
         tabData.push({
-            "6":  { "value": i },
-            "7":  { "value": selectedReports[i].report.name },
-            "8":  { "value": selectedReports[i].report.id },
-            "9":  { "value": selectedReports[i].table.id },
-            "10": { "value": selectedReports[i].table.name },
-            "11": { "value": exportRid }
+            [quickSheetTabSchema.fid.index]:  { "value": i },
+            [quickSheetTabSchema.fid.rName]:  { "value": selectedReports[i].report.name },
+            [quickSheetTabSchema.fid.rID]:  { "value": selectedReports[i].report.id },
+            [quickSheetTabSchema.fid.tID]:  { "value": selectedReports[i].table.id },
+            [quickSheetTabSchema.fid.tName]: { "value": selectedReports[i].table.name },
+            [quickSheetTabSchema.fid.ref]: { "value": exportRid }
         })
     }
 
     upsertBody = {
-        "to": "buzibjrm3",
+        "to": quickSheetTabSchema.tableID,
         "data": tabData
     }
-    upsert("buzibjrm3", realm, upsertBody);
+    upsert(quickSheetTabSchema.tableID, realm, upsertBody);
     // Write the Excel file to the browser
     XLSX.writeFile(wb, fileName+'.xlsx');
     
+    await sleep(1000);
+    selectedReports = [];
+    oList.innerHTML = "";
     document.getElementById("exportButton").disabled = false;    
-
 });
 
 function main(){
@@ -357,10 +401,6 @@ function main(){
 linkElement.onload = () => {
     
     loadCounter++;
-
-    let mainContainer = document.getElementById("container");
-    mainContainer.setAttribute("visibility","visible");
-
     main();
 }
 

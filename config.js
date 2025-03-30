@@ -16,11 +16,3 @@ const quickSheetTabSchema = {
     },
     "tableID": "buzibjrm3"
 };
-
-function getSheetSchema() {
-    return quickSheetSchema;
-}
-
-function getTabSchema() {
-    return quickSheetTabSchema;
-}
