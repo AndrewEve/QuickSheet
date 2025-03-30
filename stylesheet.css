@@ -17,6 +17,11 @@
     text-align: center;
 }
 
+.disabled {
+    pointer-events: none;  /* Prevents clicking */
+    opacity: 0.5;          /* Optional: Dim the buttons */
+}
+
 /* Table Buttons */
 .tableButton {
     display: block;
@@ -208,13 +213,47 @@ ol {
 }
 
 ol li {
+    position: relative; /* Ensures the progress bar is positioned relative to the li */
+    padding-top: 25px;
     background: white;
     margin: 5px 0;
-    padding: 10px;
+    padding-right: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
     border-radius: 6px;
     font-size: 18px;
     box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.progress-bar {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 5px;
+    background-color: #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-bar span {
+    display: block;
+    height: 100%;
+    width: 0%; /* This will be updated dynamically */
+    background-color: #007bff; /* Change color as needed */
+    transition: width 0.3s ease-in-out;
+}
+
+.progress-label {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
 }
