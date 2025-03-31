@@ -15,6 +15,7 @@
     border-radius: 10px;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
+    align-items: center;
 }
 
 .disabled {
@@ -115,23 +116,44 @@
   min-width: 50px; /* Ensures buttons don’t shrink too much */
 }
 
-/* Export button styling */
-#exportButton {
-    background-color: #ffc107; /* Yellow color */
-    color: black;
-    border: none;
-    padding: 10px 20px;
-    display: none;
-    width: 30%;
-    cursor: pointer;
-    border-radius: 6px;
-    font-size: 14px;
-    white-space: nowrap;
-    margin-left: 5px; /* Adds spacing between heading and button */
+.column-header {
+    
+    gap: 8px; /* Space between buttons */
+    align-items: center;
 }
 
-#exportButton:hover {
-    background-color: #e0a800; /* Darker yellow for hover effect */
+.column-header button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    color: white;
+}
+
+.column-header .save-export {
+    background-color: #007bff; /* Blue */
+}
+
+.column-header .save-export:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+.column-header .save {
+    background-color: #28a745; /* Green */
+}
+
+.column-header .save:hover {
+    background-color: #1e7e34; /* Darker green on hover */
+}
+
+.column-header .export {
+    background-color: #fd7e14; /* Orange */
+}
+
+.column-header .export:hover {
+    background-color: #e8590c; /* Darker orange on hover */
 }
 
 /* right align container */

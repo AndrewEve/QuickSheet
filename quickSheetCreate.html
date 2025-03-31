@@ -25,7 +25,12 @@
 
     <!-- Column 3: Selected Reports -->
     <div class="column" id="selectedReportsContainer">
-        <h2>Final Export <button id="exportButton">Export to Excel</button></h2>
+        <h2>Final Export </h2>
+        <div id="exportButtons" class="column-header disabled">
+            <button id="saveButton" class="save">Save</button>
+            <button id="exportOnlyButton" class="export">Export</button>
+            <button id="exportButton" class="save-export">Save &amp; Export</button>          
+        </div>
         <ol id="selectedReports"></ol>
     </div>
 </div>
@@ -55,9 +60,14 @@
 let selectedReports = [];
 let appTables = [];
 let tableReports = [];
+const url = new URL(window.location.href);
+const params = new URLSearchParams(url.search);
+const mode = params.get("mode");
+const suppliedRid = params.get("rid");
+const realm = window.location.href.split("/")[2];
 
 async function fetchTables() {
-    const realm = window.location.href.split("/")[2];
+    
     const data = await getTables(appID, realm);
     const tableContainer = document.getElementById("tableContainer");
     tableContainer.innerHTML = "";
@@ -118,7 +128,7 @@ async function fetchReports(dbid) {
     tableContainer.classList.add("disabled");
     
     tableReports.splice(0, tableReports.length);
-    const realm = window.location.href.split("/")[2];
+    
     const data = await getReports(dbid.id, realm);
     const reportContainer = document.getElementById("reportContainer");
     reportContainer.innerHTML = "";
@@ -198,12 +208,14 @@ function updateReportDisplay(index, dbid){
 }
 
 function toggleExportButton() {
-    const exportButton = document.getElementById("exportButton");
+    const exportButtons = document.getElementById("exportButtons");
 
     if (selectedReports.length === 0) {
-        exportButton.style.display = "none"; // Hide the button if the array is empty
+        //exportButton.style.display = "none"; // Hide the button if the array is empty
+        exportButtons.classList.add("disabled");
     } else {
-        exportButton.style.display = "inline-block"; // Show the button if there are selected reports
+        //exportButton.style.display = "inline-block"; // Show the button if there are selected reports
+        exportButtons.classList.remove("disabled");
     }
 }
 
@@ -293,16 +305,28 @@ function sleep(ms) {
 }
 
 document.getElementById("exportButton").addEventListener("click", async function () {
+    saveExportReports(suppliedRid);
+});
 
-    document.getElementById("exportButton").disabled = true;    
+document.getElementById("saveButton").addEventListener("click", async function () {
+    saveReports(suppliedRid);
+});
+
+document.getElementById("exportOnlyButton").addEventListener("click", async function () {
+    exportReports();
+});
+
+async function saveExportReports(updateRid = null){
+
+    document.getElementById("exportButtons").classList.add("disabled");    
     
-    const realm = window.location.href.split("/")[2];
+    
     const wb = XLSX.utils.book_new(); // Create a new workbook
     let fileName;
     do{
         fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
         if (fileName === null) {
-            document.getElementById("exportButton").disabled = false;   
+            document.getElementById("exportButtons").classList.remove("disabled");   
             return;
         } else if (fileName.trim() === "") {
             alert("Input cannot be empty. Please enter a valid name.");
@@ -313,7 +337,8 @@ document.getElementById("exportButton").addEventListener("click", async function
         "to": quickSheetSchema.tableID,
         "data": [
             {
-                [quickSheetSchema.fid.name]: { "value": fileName }
+                [quickSheetSchema.fid.name]: { "value": fileName },
+                "3": { "value": updateRid}
             }
         ],
         "fieldsToReturn": [
@@ -325,7 +350,11 @@ document.getElementById("exportButton").addEventListener("click", async function
     
     exportRid = exportRid.data[0]['3'].value;
 
-    tabData = [];
+    let deleteFilter = `{${quickSheetTabSchema.fid.ref}.EX.'${exportRid}'}`;
+    
+    await removeRecords(quickSheetTabSchema.tableID, deleteFilter ,realm);
+
+    let tabData = [];
 
     const oList = document.getElementById("selectedReports");
 
@@ -352,11 +381,11 @@ document.getElementById("exportButton").addEventListener("click", async function
         data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm, false, skip, data.data);
         totalRecords = data.metadata.totalRecords;
         skip += data.metadata.numRecords;
-        progressBar.value = totalRecords === 0 ? 1 : Math.round((skip/totalRecords)*100);
+        progressBar.value = totalRecords === 0 ? 100 : Math.round((skip/totalRecords)*100);
         progressLabel.textContent = `Loading Report: ${progressBar.value}%`;
         count++;
         }while((skip < data.metadata.totalRecords) && (count < 10));
-
+        
         progressLabel.textContent = "Report Loaded Successfully!";
         const xdata = transformData(data);
         const ws = XLSX.utils.aoa_to_sheet(xdata); 
@@ -365,7 +394,6 @@ document.getElementById("exportButton").addEventListener("click", async function
         //prep sheetname for excel
         sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
-               
         
         tabData.push({
             [quickSheetTabSchema.fid.index]:  { "value": i },
@@ -381,21 +409,199 @@ document.getElementById("exportButton").addEventListener("click", async function
         "to": quickSheetTabSchema.tableID,
         "data": tabData
     }
+
     upsert(quickSheetTabSchema.tableID, realm, upsertBody);
     // Write the Excel file to the browser
     XLSX.writeFile(wb, fileName+'.xlsx');
     
     await sleep(1000);
-    selectedReports = [];
-    oList.innerHTML = "";
-    document.getElementById("exportButton").disabled = false;    
-});
+    document.querySelectorAll("ol li progress").forEach(progress => progress.remove());
+    document.querySelectorAll("ol li span").forEach(span => span.remove());
+    document.getElementById("exportButtons").classList.remove("disabled");    
 
-function main(){
-    if (loadCounter === 3) {
-        fetchTables();
-    }
+}
+
+async function saveReports(updateRid = null){
+
+    document.getElementById("exportButton").classList.add("disabled");    
     
+    let fileName;
+
+    do{
+        fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+        if (fileName === null) {
+            document.getElementById("exportButton").classList.remove("disabled");   
+            return;
+        } else if (fileName.trim() === "") {
+            alert("Input cannot be empty. Please enter a valid name.");
+        }
+    } while (!fileName || fileName.trim() === "");
+
+    let upsertBody = { 
+        "to": quickSheetSchema.tableID,
+        "data": [
+            {
+                [quickSheetSchema.fid.name]: { "value": fileName },
+                "3": { "value": updateRid}
+            }
+        ],
+        "fieldsToReturn": [
+            3
+        ]
+    };
+
+    let exportRid = await upsert(quickSheetSchema.tableID, realm, upsertBody);
+    
+    exportRid = exportRid.data[0]['3'].value;
+
+    let deleteFilter = `{${quickSheetTabSchema.fid.ref}.EX.'${exportRid}'}`;
+
+    await removeRecords(quickSheetTabSchema.tableID, deleteFilter ,realm);
+
+    tabData = [];
+
+    for (let i = 0; i < selectedReports.length; i++) {
+        tabData.push({
+            [quickSheetTabSchema.fid.index]:  { "value": i },
+            [quickSheetTabSchema.fid.rName]:  { "value": selectedReports[i].report.name },
+            [quickSheetTabSchema.fid.rID]:  { "value": selectedReports[i].report.id },
+            [quickSheetTabSchema.fid.tID]:  { "value": selectedReports[i].table.id },
+            [quickSheetTabSchema.fid.tName]: { "value": selectedReports[i].table.name },
+            [quickSheetTabSchema.fid.ref]: { "value": exportRid }
+        })
+    }
+
+    upsertBody = {
+        "to": quickSheetTabSchema.tableID,
+        "data": tabData
+    }
+
+    upsert(quickSheetTabSchema.tableID, realm, upsertBody);
+    document.getElementById("exportButton").classList.remove("disabled");
+}
+
+async function exportReports(){
+
+document.getElementById("exportButton").classList.add("disabled");    
+
+const wb = XLSX.utils.book_new(); // Create a new workbook
+let fileName;
+do{
+    fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+    if (fileName === null) {
+        document.getElementById("exportButton").classList.remove("disabled");   
+        return;
+    } else if (fileName.trim() === "") {
+        alert("Input cannot be empty. Please enter a valid name.");
+    }
+} while (!fileName || fileName.trim() === "");
+
+const oList = document.getElementById("selectedReports");
+
+for (let i = 0; i < selectedReports.length; i++) {
+    
+    const progressBar = document.createElement("progress");
+    progressBar.value = 0;
+    progressBar.max = 100;
+    progressBar.classList.add("progress-bar");
+
+    const progressLabel = document.createElement("span");
+    progressLabel.classList.add("progress-label");
+    progressLabel.textContent = "Loading Report: 0%";
+
+    oList.children[i].appendChild(progressBar);
+    oList.children[i].appendChild(progressLabel);
+
+    let skip = 0;
+    let data = {"data":[]};
+    let count = 0;
+    let totalRecords = 1;
+    do{
+
+    data = await runReport(selectedReports[i].table.id, selectedReports[i].report.id, realm, false, skip, data.data);
+    totalRecords = data.metadata.totalRecords;
+    skip += data.metadata.numRecords;
+    progressBar.value = totalRecords === 0 ? 100 : Math.round((skip/totalRecords)*100);
+    progressLabel.textContent = `Loading Report: ${progressBar.value}%`;
+    count++;
+    }while((skip < data.metadata.totalRecords) && (count < 10));
+
+    progressLabel.textContent = "Report Loaded Successfully!";
+    const xdata = transformData(data);
+    const ws = XLSX.utils.aoa_to_sheet(xdata); 
+
+    let sheetName = selectedReports[i].table.name + " - " + selectedReports[i].report.name + " (" + selectedReports[i].report.id + ")";
+    //prep sheetname for excel
+    sheetName = (i+1).toString() + " - " + sheetName.slice(0,26).replace(/[\/:*?"<>|]/g, '').trim();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    
+}
+
+// Write the Excel file to the browser
+XLSX.writeFile(wb, fileName+'.xlsx');
+
+await sleep(1000);
+document.querySelectorAll("ol li progress").forEach(progress => progress.remove());
+document.querySelectorAll("ol li span").forEach(span => span.remove());
+document.getElementById("exportButton").classList.remove("disabled");    
+
+}
+
+async function loadTemplate(){
+    
+    let fields = [
+
+        parseInt(quickSheetTabSchema.fid.index),
+        parseInt(quickSheetTabSchema.fid.rID),
+        parseInt(quickSheetTabSchema.fid.rName),
+        parseInt(quickSheetTabSchema.fid.tID),
+        parseInt(quickSheetTabSchema.fid.tName),
+        parseInt(quickSheetTabSchema.fid.ref)
+
+    ];
+
+    let filter = `{${quickSheetTabSchema.fid.ref}.EX.${suppliedRid}}`;
+
+    let sort = [{
+        "fieldId": parseInt(quickSheetTabSchema.fid.index),
+        "order": "ASC"
+    }];
+
+    let suppliedReports = await queryData(quickSheetTabSchema.tableID, fields, filter, realm, sort);
+
+    let currReport;
+
+    for(let i = 0; i < suppliedReports.data.length; i++){
+        currReport = {
+            "report": {
+                "id": (suppliedReports.data[i][quickSheetTabSchema.fid.rID].value).toString(),
+                "name": (suppliedReports.data[i][quickSheetTabSchema.fid.rName].value)
+            },
+            "table": {
+                "id": (suppliedReports.data[i][quickSheetTabSchema.fid.tID].value),
+                "name": (suppliedReports.data[i][quickSheetTabSchema.fid.tName].value)
+            }
+        };
+        addReport(currReport);
+    }
+}
+
+async function main(){
+    if (loadCounter === 3) {
+        
+
+        if(mode === "run"){
+            await loadTemplate();
+            await exportReports();
+            window.close();
+        } else if (mode === "update") {
+            fetchTables();
+            await loadTemplate();
+        } else {
+            fetchTables();
+        }
+
+    }
 }
 
 linkElement.onload = () => {

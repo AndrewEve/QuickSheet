@@ -22,7 +22,7 @@ async function tempToken(dbid, realm) {
     }
 }
 
-async function queryData(dbid, fields, filter, realm) {
+async function queryData(dbid, fields, filter, realm, sort = null) {
     try {
         const url = "https://api.quickbase.com/v1/records/query";
         const token = await tempToken(dbid, realm);
@@ -37,6 +37,35 @@ async function queryData(dbid, fields, filter, realm) {
                 body: JSON.stringify({
                     "from": dbid,
                     "select": fields,
+                    "where": filter
+                })
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function removeRecords(dbid, filter, realm) {
+    try {
+        const url = "https://api.quickbase.com/v1/records";
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "DELETE",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                },
+                body: JSON.stringify({
+                    "from": dbid,
                     "where": filter
                 })
             }
@@ -83,30 +112,7 @@ async function runReport(dbid, reportID, realm, fullReport = true, skip = 0, dat
     }
 }
 
-/*async function runReport(dbid, reportID, realm) {
-    try {
-        const url = "https://api.quickbase.com/v1/reports/"+reportID+"/run?tableId="+dbid;
-        const token = await tempToken(dbid, realm);
-        const response = await fetch(url,
-            {
-                method: "POST",
-                headers: {
-                    "QB-Realm-Hostname": realm,
-                    "Content-Type": "application/json",
-                    "Authorization": "QB-TEMP-TOKEN " + token
-                }
-            }
-        );
-        if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-        }
 
-        const json = await response.json();
-        return json;
-    } catch (error) {
-        console.error(error.message);
-    }
-}*/
 
 async function getTables(dbid, realm) {
     try {
