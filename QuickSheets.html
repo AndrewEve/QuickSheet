@@ -71,8 +71,6 @@ async function fetchTables() {
     const data = await getTables(appID, realm);
     const tableContainer = document.getElementById("tableContainer");
     tableContainer.innerHTML = "";
-    
-    data = data.filter(item => item.type !== "kanban");
 
     let pageSize = 15;
     let sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -131,9 +129,11 @@ async function fetchReports(dbid) {
     
     tableReports.splice(0, tableReports.length);
     
-    const data = await getReports(dbid.id, realm);
+    let data = await getReports(dbid.id, realm);
     const reportContainer = document.getElementById("reportContainer");
     reportContainer.innerHTML = "";
+
+    data = data.filter(item => item.type !== "kanban");
 
     let pageSize = 8;
     let sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
