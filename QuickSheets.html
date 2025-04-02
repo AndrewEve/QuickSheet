@@ -37,34 +37,71 @@
 <script>
 
     const appID = window.location.href.split("/")[4].split("?")[0];
-    let loadCounter = 0;
-    
-    let linkElement = document.createElement("link");
-    linkElement.rel = "stylesheet";
-    linkElement.type = 'text/css';
-    linkElement.href = `/db/${appID}?a=dbpage&pagename=stylesheet.css`;
 
-    let qbAPI = document.createElement("script");
-    qbAPI.src = `/db/${appID}?a=dbpage&pagename=qbAPI.js`;
-    qbAPI.type = 'text/javascript';
+    let selectedReports = [];
+    let appTables = [];
+    let tableReports = [];
 
-    let schemas = document.createElement("script")
-    schemas.src = `/db/${appID}?a=dbpage&pagename=config.js`;
-    schemas.type = 'text/javascript';
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+    const mode = params.get("mode");
+    const suppliedRid = params.get("rid");
+    const realm = window.location.href.split("/")[2];
+    const dependencies = [
+        {"src": `/db/${appID}?a=dbpage&pagename=QuickSheetsConfig.js`, "type": "script"},
+        {"src": `/db/${appID}?a=dbpage&pagename=qbAPI.js`, "type": "script"},
+        {"src": `/db/${appID}?a=dbpage&pagename=QuickSheetsStylesheet.css`, "type": "css"}      
+        
+    ];
 
-   
-    document.head.appendChild(linkElement);
-    document.head.appendChild(qbAPI);
-    document.head.appendChild(schemas);
+    function loadDependency(src, type) {
+    return new Promise((resolve, reject) => {
+        let element;
+        
+        if (type === "script") {
+            element = document.createElement("script");
+            element.src = src;
+            element.async = true;
+            element.onload = () => {
+                console.log(`Loaded script: ${src}`);
+                resolve(src);
+            };
+            element.onerror = () => {
+                console.error(`Failed to load script: ${src}`);
+                reject(new Error(`Failed to load ${src}`));
+            };
+        } else if (type === "css") {
+            element = document.createElement("link");
+            element.rel = "stylesheet";
+            element.href = src;
+            element.onload = () => {
+                console.log(`Loaded CSS: ${src}`);
+                resolve(src);
+            };
+            
+            // Fallback for older browsers (CSS doesn't always trigger onload)
+            setTimeout(() => {
+                console.log(`Assuming CSS loaded: ${src}`);
+                resolve(src);
+            }, 1000); // Adjust delay if needed
+        } else {
+            reject(new Error(`Unknown type: ${type}`));
+            return;
+        }
 
-let selectedReports = [];
-let appTables = [];
-let tableReports = [];
-const url = new URL(window.location.href);
-const params = new URLSearchParams(url.search);
-const mode = params.get("mode");
-const suppliedRid = params.get("rid");
-const realm = window.location.href.split("/")[2];
+        document.head.appendChild(element);
+    });
+}
+
+// Load all dependencies and run main() when done
+Promise.all(dependencies.map(r => loadDependency(r.src, r.type)))
+    .then(() => {
+        console.log("All resources loaded. Running main().");
+        main();
+    })
+    .catch((error) => {
+        console.error("Resource loading failed:", error);
+    });
 
 async function fetchTables() {
     
@@ -589,9 +626,7 @@ async function loadTemplate(){
 }
 
 async function main(){
-    if (loadCounter === 3) {
         
-
         if(mode === "run"){
             await loadTemplate();
             await exportReports();
@@ -602,25 +637,7 @@ async function main(){
         } else {
             fetchTables();
         }
-
-    }
-}
-
-linkElement.onload = () => {
-    
-    loadCounter++;
-    main();
-}
-
-qbAPI.onload = () => {
-       
-    loadCounter++;
-    main();
-}
-
-schemas.onload = () => {
-    loadCounter++;
-    main();
+   
 }
 
 </script>

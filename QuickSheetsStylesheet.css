@@ -279,3 +279,35 @@ ol li {
     font-weight: bold;
     color: #333;
 }
+
+.back-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 10px 15px;
+  background-color: #CCCCCC; /* Adjust color as needed */
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background-color: #8E8E8E;
+}
+
+.save-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 10px 15px;
+  background-color: #CCCCCC; /* Adjust color as needed */
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.save-button:hover {
+  background-color: #8E8E8E;
+}
