@@ -7,6 +7,10 @@
         
         <script>
 
+let currSchema; 
+
+let tempSchema;
+
 let appTables = [];
 const container = document.getElementById("container");
 const appID = window.location.href.split("/")[4].split("?")[0];
@@ -69,7 +73,13 @@ Promise.all(dependencies.map(r => loadDependency(r.src, r.type)))
 
 
 async function init(){
-  
+    if( currSchema === undefined){
+        currSchema = {
+            "quickSheetSchema": JSON.parse(JSON.stringify(quickSheetSchema)),
+            "quickSheetTabSchema": JSON.parse(JSON.stringify(quickSheetTabSchema))
+        };
+    }
+
     if(appTables.length < 1){
     await fetchTables();
 
@@ -88,7 +98,7 @@ async function init(){
   let installBtn = document.createElement("button");
   installBtn.classList.add("tableButton");
   installBtn.textContent = "Install";
- 	installBtn.onclick = () => install();
+  installBtn.onclick = () => install();
   
   let editConfigBtn = document.createElement("button");
   editConfigBtn.classList.add("tableButton");
@@ -130,6 +140,7 @@ function install(){
 
 async function editConfig(){
 
+tempSchema = JSON.parse(JSON.stringify(currSchema));
 container.innerHTML = "";
 
 let backBtn = document.createElement("button");
@@ -138,21 +149,25 @@ backBtn.textContent = "Cancel";
 backBtn.onclick = () => init();
 
 let saveBtn = document.createElement("button");
+saveBtn.id = "saveBtn";
 saveBtn.classList.add("save-button");
 saveBtn.textContent = "Save";
-saveBtn.onclick = () => init();
+saveBtn.onclick = () => {
+    saveSchema();
+    init();
+};
 
 let qSColumn = document.createElement("div");
 qSColumn.classList.add("column");
 let qSHeading = document.createElement("h2");
-qSHeading.textContent = "QuickSheet Table Settings";
+qSHeading.textContent = "QuickSheet Templates Table Settings";
 qSColumn.appendChild(qSHeading);
 
 let qSTabColumn = document.createElement("div");
 qSTabColumn.classList.add("column");
 
 let qSTabHeading = document.createElement("h2");
-qSTabHeading.textContent = "QuickSheet Tab Table Settings";
+qSTabHeading.textContent = "QuickSheet Tabs Table Settings";
 qSTabColumn.appendChild(qSTabHeading);
 
 container.appendChild(backBtn);
@@ -161,67 +176,78 @@ container.appendChild(saveBtn);
 let dropDowns = [
     {
       "title": "Table:",
-      "init": appTables.find(item => item.id === quickSheetSchema.tableID)?.name,
-      "values": appTables
+      "init": appTables.find(item => item.id === tempSchema.quickSheetSchema.tableID)?.name,
+      "values": appTables,
+      "update": "tableID"
     },
     {
       "title": "Template Name Field:",
-      "init": appTables.find(item => item.id === quickSheetSchema.tableID)?.fieldList.find(fld => fld.id.toString() === quickSheetSchema.fid.name)?.label,
-      "values": appTables.find(item => item.id === quickSheetSchema.tableID)?.fieldList.filter(fld => fld.fieldType === "text" && fld.mode === ""
+      "init": appTables.find(item => item.id === tempSchema.quickSheetSchema.tableID)?.fieldList.find(fld => fld.id.toString() === tempSchema.quickSheetSchema.fid.name)?.name,
+      "values": appTables.find(item => item.id === tempSchema.quickSheetSchema.tableID)?.fieldList.filter(fld => fld.fieldType === "text" && fld.mode === ""
       ).map(item => {
         let { label, ...rest } = item;
         return {name: label, ...rest};
-      })
+      }),
+      "update": "name"
     }
 ];
 
 for(let i = 0; i < dropDowns.length; i++ ){
 
-qSColumn.appendChild(await createDropdown(dropDowns[i].title, "qSColumn", dropDowns[i].init, dropDowns[i].values));
+qSColumn.appendChild(await createDropdown(dropDowns[i].title, "qSColumn", dropDowns[i].init, dropDowns[i].values, dropDowns[i].update));
 
 }
 
-let tabFields = appTables.find(item => item.id === quickSheetTabSchema.tableID)?.fieldList.map(item => {
-        let { label, ...rest } = item;
-        return {name: label, ...rest};
-      });
+let tabFields = appTables.find(item => item.id === tempSchema.quickSheetTabSchema.tableID)?.fieldList;
 
 let dropDownsTab = [
-      {
+    {
       "title": "Table:",
-      "init": appTables.find(item => item.id === quickSheetTabSchema.tableID)?.name,
-      "values": appTables.filter(item => item.parents.includes(quickSheetSchema.tableID))
+      "init": appTables.find(item => item.id === tempSchema.quickSheetTabSchema.tableID)?.name,
+      "values": appTables.filter(item => item.parents.includes(tempSchema.quickSheetSchema.tableID)),
+      "update": "tableID"
   },
   {
       "title": "Report Name:",
-      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.rName)?.name,
-      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.rName)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === ""),
+      "update": "rName"
   },
   {
       "title": "Report ID:",
-      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.rID)?.name,
-      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === "")
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.rID)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === ""),
+      "update": "rID"
   },
   {
       "title": "Report's Table Name:",
-      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.tName)?.name,
-      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.tName)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === ""),
+      "update": "tName"
   },
   {
       "title": "Report's Table ID:",
-      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.tID)?.name,
-      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.tID)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === ""),
+      "update": "tID"
   },
   {
       "title": "Index/Tab Number:",
-      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.index)?.name,
-      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === "")
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.index)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === ""),
+      "update": "index"
+  },
+  {
+      "title": "Reference Field:",
+      "init": tabFields.find(fld => fld.id.toString() === tempSchema.quickSheetTabSchema.fid.ref)?.name,
+      "values": tabFields.filter(fld => fld.properties.masterTableId === tempSchema.quickSheetSchema.tableID),
+      "update": "ref"
   }
 ];
 
 for(let i = 0; i < dropDownsTab.length; i++ ){
 
-qSTabColumn.appendChild(await createDropdown(dropDownsTab[i].title, "qSTabColumn", dropDownsTab[i].init, dropDownsTab[i].values));
+qSTabColumn.appendChild(await createDropdown(dropDownsTab[i].title, "qSTabColumn", dropDownsTab[i].init, dropDownsTab[i].values, dropDownsTab[i].update));
 
 }
 
@@ -230,7 +256,7 @@ container.appendChild(qSTabColumn);
 
 }
 
-async function createDropdown(title, column, initValue, values){
+async function createDropdown(title, column, initValue, values, update){
 
 let ddContainer = document.createElement("div");
 ddContainer.classList.add("dropdown-container");
@@ -254,16 +280,32 @@ for(let i = 0; i < values.length; i++) {
     option.href = "#";
     option.textContent = values[i].name;
     option.onclick = () => { 
+        let tableName = column === "qSTabColumn" ? "quickSheetTabSchema" : "quickSheetSchema";
+        if( update === "tableID" ){
+            tempSchema[tableName][update] = values[i].id.toString();
+        } else {
+            tempSchema[tableName]["fid"][update] = values[i].id.toString();
+        }
         dropdownBtn.textContent = values[i].name;
         if(title === "Table:" && column === "qSColumn"){
-            loadOptions("BtnTable:qSTabColumn","Table:qSTabColumn", values[i].id);
-            loadOptions("BtnTemplate Name Field:qSColumn","Template Name Field:qSColumn", values[i].id, "text");
+            loadOptions("BtnTable:qSTabColumn","Table:qSTabColumn", "tableID", values[i].id);
+            loadOptions("BtnTemplate Name Field:qSColumn","Template Name Field:qSColumn", "name", values[i].id, "text");
+            
+            clearTabSchema("BtnReport Name:qSTabColumn", "rName");
+            clearTabSchema("BtnReport ID:qSTabColumn", "rID");
+            clearTabSchema("BtnReport's Table Name:qSTabColumn", "tName");
+            clearTabSchema("BtnReport's Table ID:qSTabColumn", "tID");
+            clearTabSchema("BtnIndex/Tab Number:qSTabColumn", "index");
+            clearTabSchema("BtnReference Field:qSTabColumn", "ref");
+            
+            toggleSave(tempSchema) ? document.getElementById("saveBtn").classList.add("disabled") : document.getElementById("saveBtn").classList.remove("disabled");
         } else if( title === "Table:" && column === "qSTabColumn") {
-            loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", values[i].id, "text");
-            loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", values[i].id, "numeric");
-            loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", values[i].id, "text");
-            loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", values[i].id, "text");
-            loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", values[i].id, "numeric");
+            loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", "rName", values[i].id, "text");
+            loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", "rID", values[i].id, "numeric");
+            loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", "tName", values[i].id, "text");
+            loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", "tID", values[i].id, "text");
+            loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", "index", values[i].id, "numeric");
+            loadOptions("BtnReference Field:qSTabColumn","Reference Field:qSTabColumn", "ref", values[i].id, "ref");
         }
     }; 
     dropdownContent.appendChild(option);
@@ -276,42 +318,64 @@ ddContainer.appendChild(dropdown);
 return ddContainer;
 }
 
-async function loadOptions(btnId, contentId, id, type = null){
+async function loadOptions(btnId, contentId, update, id, type = null){
     container.classList.add("disabled");
-    console.log("loadOptions: "+id);
+
     const content = document.getElementById(contentId);
     const btn = document.getElementById(btnId);
+    const tableName = btnId.includes("qSTabColumn") ? "quickSheetTabSchema" : "quickSheetSchema";
+    btn.textContent = "";
+    btn.classList.remove("disabled");
     let values;
     content.innerHTML = "";
     if( btnId.includes("Table:") )  {
         values = appTables.filter(item => item.parents.includes(id));
+        tempSchema[tableName][update] = "";
     } else {
+        tempSchema[tableName]["fid"][update] = "";
         let currFieldList = await getFields(id, realm);
         currFieldList = currFieldList.map(item => {
         let { label, ...rest } = item;
         return {name: label, ...rest};
       });
         appTables.find(item => item.id === id).fieldList = currFieldList;
-        values = currFieldList.filter(item => item.fieldType === type && item.mode === "");
+        values = type === "ref" ? currFieldList.filter(item => item.properties.masterTableId === tempSchema.quickSheetSchema.tableID) : currFieldList.filter(item => item.fieldType === type && item.mode === "");
+        if(type === "ref") {console.log(tempSchema.quickSheetSchema.tableID);}
     } 
     let option;
     for(let i = 0; i < values.length; i++) {
         option = document.createElement("a");
         option.href = "#";
         option.textContent = values[i].name;
-        option.onclick = () => { 
+        option.onclick = () => {
+            if( update === "tableID" ){
+                tempSchema[tableName][update] = values[i].id.toString();
+            } else {
+                tempSchema[tableName]["fid"][update] = values[i].id.toString();
+            }
+            toggleSave(tempSchema) ? document.getElementById("saveBtn").classList.add("disabled") : document.getElementById("saveBtn").classList.remove("disabled");
             btn.textContent = values[i].name;
             if( btnId.includes("Table:") )  {
-                loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", values[i].id, "text");
-                loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", values[i].id, "numeric");
-                loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", values[i].id, "text");
-                loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", values[i].id, "text");
-                loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", values[i].id, "numeric");
+            loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", "rName", values[i].id, "text");
+            loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", "rID", values[i].id, "numeric");
+            loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", "tName", values[i].id, "text");
+            loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", "tID", values[i].id, "text");
+            loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", "index", values[i].id, "numeric");
+            loadOptions("BtnReference Field:qSTabColumn","Reference Field:qSTabColumn", "ref", values[i].id, "ref");
             }
         }; 
         content.appendChild(option);
     }
    container.classList.remove("disabled");
+}
+
+function clearTabSchema(btnID, fName){
+
+    let currElement = "";
+    currElement = document.getElementById(btnID);
+    currElement.textContent = "";
+    currElement.classList.add("disabled");
+    tempSchema["quickSheetTabSchema"]["fid"][fName] = "";
 }
 
 function toggleDropdown(dropdownId) {
@@ -335,6 +399,21 @@ document.querySelectorAll(".dropdown-content").forEach((dropdown) => {
 }
 });
 
+function toggleSave(obj){
+
+    for (const key in obj) {
+        if (obj[key] === "") {
+            return true;
+        }
+        if (typeof obj[key] === "object" && obj[key] !== null) {
+            if (toggleSave(obj[key])) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 async function fetchTables() {
     
     const data = await getTables(appID, realm);
@@ -346,14 +425,26 @@ async function fetchTables() {
 
     if( quickSheetSchema.tableID !== null && quickSheetSchema.tableID !== undefined ) {
         let fields = await getFields(quickSheetSchema.tableID, realm);
+        fields = fields.map(item => {
+            let { label, ...rest } = item;
+            return {name: label, ...rest};
+        });
         appTables.find(item => item.id === quickSheetSchema.tableID).fieldList = fields;
     } 
 
     if( quickSheetTabSchema.tableID !== null && quickSheetTabSchema.tableID !== undefined ) {
         let fields = await getFields(quickSheetTabSchema.tableID, realm);
+        fields = fields.map(item => {
+            let { label, ...rest } = item;
+            return {name: label, ...rest};
+        });
         appTables.find(item => item.id === quickSheetTabSchema.tableID).fieldList = fields;
     } 
 
+}
+
+function saveSchema(){
+    currSchema = JSON.parse(JSON.stringify(tempSchema));
 }
 
         </script>
