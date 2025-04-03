@@ -311,3 +311,84 @@ ol li {
 .save-button:hover {
   background-color: #8E8E8E;
 }
+
+/* Flex container for title + dropdown */
+.dropdown-container {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adds spacing between title and dropdown */
+  padding: 5px 10px;
+  width: 100%
+}
+
+/* Style for the title text */
+.dropdown-title {
+  font-size: 24px;
+  font-weight: bold;
+  
+}
+
+/* Dropdown container */
+.dropdown {
+  position: relative;
+  margin-left: auto;
+  display: inline-block;
+}
+
+/* Dropdown button */
+.dropdown-btn {
+  background-color: white;
+  width: 150px;
+  color: black;
+  padding: 10px 15px;
+  border: 1;
+  cursor: pointer;
+  border-radius: 5px;
+  display: flex;
+}
+/* Add an arrow using ::after */
+.dropdown-btn::after {
+  content: "\25BC"; /* Unicode arrow */
+  font-size: 12px;
+  position: relative;
+  margin-left: auto;
+}
+
+/* Dropdown content (hidden by default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 100%; /* Moves the dropdown to the right of the button */
+  top: 0;
+  background-color: white;
+  width: 150px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  border: 1px solid #ccc; 
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Dropdown links */
+.dropdown-content a {
+  color: black;
+  padding: 10px;
+  text-decoration: none;
+  display: block;
+  border-bottom: 1px solid black; /* Add separation between options */
+}
+
+/* Remove the last item's bottom border */
+.dropdown-content a:last-child {
+  border-bottom: none;
+}
+
+/* Hover effect on dropdown links */
+.dropdown-content a:hover {
+  background-color: #f1f1f1;
+}
+
+/* Show dropdown only when the .show class is added */
+.dropdown-content.show {
+  display: block;
+}

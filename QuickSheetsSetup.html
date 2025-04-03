@@ -1,10 +1,13 @@
 <html>
-    <head></head>  
+    <head>
+        <title>QuickSheets Setup</title>
+    </head>  
     <body>
         <div class="container" id="container"></div>
         
         <script>
 
+let appTables = [];
 const container = document.getElementById("container");
 const appID = window.location.href.split("/")[4].split("?")[0];
 const realm = window.location.href.split("/")[2];
@@ -15,7 +18,7 @@ const dependencies = [
         
     ];
 
-    function loadDependency(src, type) {
+function loadDependency(src, type) {
     return new Promise((resolve, reject) => {
         let element;
         
@@ -65,10 +68,18 @@ Promise.all(dependencies.map(r => loadDependency(r.src, r.type)))
     });
 
 
-function init(){
-	
+async function init(){
+  
+    if(appTables.length < 1){
+    await fetchTables();
+
+    for(let i = 0; i < appTables.length; i++) {
+        loadParents(appTables[i], i);
+    }
+    }
+
   container.innerHTML = "";
-	let column = document.createElement("div");
+  let column = document.createElement("div");
   column.classList.add("column");
   
   let heading = document.createElement("h2");
@@ -91,6 +102,19 @@ function init(){
 
 }
 
+async function loadParents(table, index){
+        appTables[index].parents = [];
+        parentTables = await getRels(table.id, realm);
+        parentTables = parentTables.relationships.length > 0 ? parentTables.relationships.filter(item => item.isCrossApp === false).map(item => item.parentTableId) : [];
+        if(parentTables.length > 0) {
+            console.log(table.name +": "+parentTables);
+        }
+        appTables[index].parents = parentTables;
+        if((appTables.length-(index+1)) === 0){
+            console.log("Remaining: "+ (appTables.length-(index+1)));
+        }
+}
+
 function install(){
 
 	container.innerHTML = "";
@@ -104,23 +128,233 @@ function install(){
     
     }
 
-    function editConfig(){
+async function editConfig(){
 
-        container.innerHTML = "";
+container.innerHTML = "";
 
-        let backBtn = document.createElement("button");
-    backBtn.classList.add("back-button");
-    backBtn.textContent = "Cancel";
-    backBtn.onclick = () => init();
+let backBtn = document.createElement("button");
+backBtn.classList.add("back-button");
+backBtn.textContent = "Cancel";
+backBtn.onclick = () => init();
 
-        let saveBtn = document.createElement("button");
-    saveBtn.classList.add("save-button");
-    saveBtn.textContent = "Save";
-    saveBtn.onclick = () => init();
+let saveBtn = document.createElement("button");
+saveBtn.classList.add("save-button");
+saveBtn.textContent = "Save";
+saveBtn.onclick = () => init();
 
-        container.appendChild(backBtn);
-    container.appendChild(saveBtn);
+let qSColumn = document.createElement("div");
+qSColumn.classList.add("column");
+let qSHeading = document.createElement("h2");
+qSHeading.textContent = "QuickSheet Table Settings";
+qSColumn.appendChild(qSHeading);
+
+let qSTabColumn = document.createElement("div");
+qSTabColumn.classList.add("column");
+
+let qSTabHeading = document.createElement("h2");
+qSTabHeading.textContent = "QuickSheet Tab Table Settings";
+qSTabColumn.appendChild(qSTabHeading);
+
+container.appendChild(backBtn);
+container.appendChild(saveBtn);
+
+let dropDowns = [
+    {
+      "title": "Table:",
+      "init": appTables.find(item => item.id === quickSheetSchema.tableID)?.name,
+      "values": appTables
+    },
+    {
+      "title": "Template Name Field:",
+      "init": appTables.find(item => item.id === quickSheetSchema.tableID)?.fieldList.find(fld => fld.id.toString() === quickSheetSchema.fid.name)?.label,
+      "values": appTables.find(item => item.id === quickSheetSchema.tableID)?.fieldList.filter(fld => fld.fieldType === "text" && fld.mode === ""
+      ).map(item => {
+        let { label, ...rest } = item;
+        return {name: label, ...rest};
+      })
     }
+];
+
+for(let i = 0; i < dropDowns.length; i++ ){
+
+qSColumn.appendChild(await createDropdown(dropDowns[i].title, "qSColumn", dropDowns[i].init, dropDowns[i].values));
+
+}
+
+let tabFields = appTables.find(item => item.id === quickSheetTabSchema.tableID)?.fieldList.map(item => {
+        let { label, ...rest } = item;
+        return {name: label, ...rest};
+      });
+
+let dropDownsTab = [
+      {
+      "title": "Table:",
+      "init": appTables.find(item => item.id === quickSheetTabSchema.tableID)?.name,
+      "values": appTables.filter(item => item.parents.includes(quickSheetSchema.tableID))
+  },
+  {
+      "title": "Report Name:",
+      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.rName)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+  },
+  {
+      "title": "Report ID:",
+      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.rID)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === "")
+  },
+  {
+      "title": "Report's Table Name:",
+      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.tName)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+  },
+  {
+      "title": "Report's Table ID:",
+      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.tID)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "text" && fld.mode === "")
+  },
+  {
+      "title": "Index/Tab Number:",
+      "init": tabFields.find(fld => fld.id.toString() === quickSheetTabSchema.fid.index)?.name,
+      "values": tabFields.filter(fld => fld.fieldType === "numeric" && fld.mode === "")
+  }
+];
+
+for(let i = 0; i < dropDownsTab.length; i++ ){
+
+qSTabColumn.appendChild(await createDropdown(dropDownsTab[i].title, "qSTabColumn", dropDownsTab[i].init, dropDownsTab[i].values));
+
+}
+
+container.appendChild(qSColumn);
+container.appendChild(qSTabColumn);
+
+}
+
+async function createDropdown(title, column, initValue, values){
+
+let ddContainer = document.createElement("div");
+ddContainer.classList.add("dropdown-container");
+let ddTitle = document.createElement("span");
+ddTitle.classList.add("dropdown-title");
+ddTitle.textContent = title;
+let dropdown = document.createElement("div");
+dropdown.classList.add("dropdown");
+ let dropdownBtn = document.createElement("button");
+dropdownBtn.id = "Btn"+title+column;
+dropdownBtn.classList.add("dropdown-btn");
+dropdownBtn.textContent = initValue;
+dropdownBtn.onclick = () => toggleDropdown(title+column);
+let dropdownContent = document.createElement("div");
+dropdownContent.id = title+column;
+dropdownContent.classList.add("dropdown-content");
+let option;
+
+for(let i = 0; i < values.length; i++) {
+    option = document.createElement("a");
+    option.href = "#";
+    option.textContent = values[i].name;
+    option.onclick = () => { 
+        dropdownBtn.textContent = values[i].name;
+        if(title === "Table:" && column === "qSColumn"){
+            loadOptions("BtnTable:qSTabColumn","Table:qSTabColumn", values[i].id);
+            loadOptions("BtnTemplate Name Field:qSColumn","Template Name Field:qSColumn", values[i].id, "text");
+        } else if( title === "Table:" && column === "qSTabColumn") {
+            loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", values[i].id, "text");
+            loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", values[i].id, "numeric");
+            loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", values[i].id, "text");
+            loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", values[i].id, "text");
+            loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", values[i].id, "numeric");
+        }
+    }; 
+    dropdownContent.appendChild(option);
+}
+
+dropdown.appendChild(dropdownBtn);
+dropdown.appendChild(dropdownContent);
+ddContainer.appendChild(ddTitle);
+ddContainer.appendChild(dropdown);
+return ddContainer;
+}
+
+async function loadOptions(btnId, contentId, id, type = null){
+    container.classList.add("disabled");
+    console.log("loadOptions: "+id);
+    const content = document.getElementById(contentId);
+    const btn = document.getElementById(btnId);
+    let values;
+    content.innerHTML = "";
+    if( btnId.includes("Table:") )  {
+        values = appTables.filter(item => item.parents.includes(id));
+    } else {
+        let currFieldList = await getFields(id, realm);
+        currFieldList = currFieldList.map(item => {
+        let { label, ...rest } = item;
+        return {name: label, ...rest};
+      });
+        appTables.find(item => item.id === id).fieldList = currFieldList;
+        values = currFieldList.filter(item => item.fieldType === type && item.mode === "");
+    } 
+    let option;
+    for(let i = 0; i < values.length; i++) {
+        option = document.createElement("a");
+        option.href = "#";
+        option.textContent = values[i].name;
+        option.onclick = () => { 
+            btn.textContent = values[i].name;
+            if( btnId.includes("Table:") )  {
+                loadOptions("BtnReport Name:qSTabColumn","Report Name:qSTabColumn", values[i].id, "text");
+                loadOptions("BtnReport ID:qSTabColumn","Report ID:qSTabColumn", values[i].id, "numeric");
+                loadOptions("BtnReport's Table Name:qSTabColumn","Report's Table Name:qSTabColumn", values[i].id, "text");
+                loadOptions("BtnReport's Table ID:qSTabColumn","Report's Table ID:qSTabColumn", values[i].id, "text");
+                loadOptions("BtnIndex/Tab Number:qSTabColumn","Index/Tab Number:qSTabColumn", values[i].id, "numeric");
+            }
+        }; 
+        content.appendChild(option);
+    }
+   container.classList.remove("disabled");
+}
+
+function toggleDropdown(dropdownId) {
+// Close all dropdowns first
+document.querySelectorAll('.dropdown-content').forEach((dropdown) => {
+if (dropdown.id !== dropdownId) {
+  dropdown.classList.remove('show');
+}
+});
+
+// Toggle the selected dropdown
+document.getElementById(dropdownId).classList.toggle('show');
+}
+
+// Close dropdown if clicking outside
+document.addEventListener("click", function(event) {
+if (!event.target.closest(".dropdown")) {
+document.querySelectorAll(".dropdown-content").forEach((dropdown) => {
+  dropdown.classList.remove("show");
+});
+}
+});
+
+async function fetchTables() {
+    
+    const data = await getTables(appID, realm);
+    const tableContainer = document.getElementById("tableContainer");
+
+    let sortedData = data.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    
+    appTables = sortedData;
+
+    if( quickSheetSchema.tableID !== null && quickSheetSchema.tableID !== undefined ) {
+        let fields = await getFields(quickSheetSchema.tableID, realm);
+        appTables.find(item => item.id === quickSheetSchema.tableID).fieldList = fields;
+    } 
+
+    if( quickSheetTabSchema.tableID !== null && quickSheetTabSchema.tableID !== undefined ) {
+        let fields = await getFields(quickSheetTabSchema.tableID, realm);
+        appTables.find(item => item.id === quickSheetTabSchema.tableID).fieldList = fields;
+    } 
+
+}
 
         </script>
 

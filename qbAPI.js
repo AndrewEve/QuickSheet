@@ -1,4 +1,32 @@
+const tempTokens = [];
+
+class TimedBoolean {
+    constructor(duration) {
+        this.value = true;
+        setTimeout(() => {
+            this.value = false;
+        }, duration);
+    }
+}
+
+function upsertToken(tkn) {
+    const index = tempTokens.findIndex(obj => obj.id === tkn.id);
+    
+    if (index !== -1) {
+        // Update existing object
+        tempTokens[index] = { ...tempTokens[index], ...tkn };
+    } else {
+        // Add new object
+        tempTokens.push(tkn);
+    }
+}
+
 async function tempToken(dbid, realm) {
+    let existingToken = tempTokens.find(item => item.id === dbid);    
+    if( existingToken !== undefined && existingToken !== null && !existingToken.expired){
+            return existingToken.temporaryAuthorization;
+    }
+    
     const url = "https://api.quickbase.com/v1/auth/temporary/"+dbid;
     try {
         const response = await fetch(url,
@@ -16,6 +44,12 @@ async function tempToken(dbid, realm) {
         }
 
         const json = await response.json();
+        let tempTkn = {
+            "temporaryAuthorization": json.temporaryAuthorization, 
+            "id": dbid,
+            "expired": new TimedBoolean(240000)
+        };
+        upsertToken(tempTkn);
         return json.temporaryAuthorization;
     } catch (error) {
         console.error(error.message);
@@ -117,6 +151,56 @@ async function runReport(dbid, reportID, realm, fullReport = true, skip = 0, dat
 async function getTables(dbid, realm) {
     try {
         const url = "https://api.quickbase.com/v1/tables?appId="+dbid;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "GET",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                }
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function getFields(dbid, realm) {
+    try {
+        const url = "https://api.quickbase.com/v1/fields?tableId="+dbid;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "GET",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                }
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function getRels(dbid, realm) {
+    try {
+        const url = "https://api.quickbase.com/v1/tables/" + dbid + "/relationships";
         const token = await tempToken(dbid, realm);
         const response = await fetch(url,
             {
