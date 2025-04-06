@@ -56,6 +56,37 @@ async function tempToken(dbid, realm) {
     }
 }
 
+async function updateCodePage(dbid, realm, pageInfo, pageName, apptoken = null) {
+    try {
+        const url = "https://"+ realm + "/db/"+dbid;
+        apptoken = apptoken === null ? "" : `<apptoken>${apptoken}</apptoken>`;
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/xml",
+                    "QUICKBASE-ACTION": "API_AddReplaceDBPage"
+                },
+                body: `<qdbapi>
+                <pagename>${pageName}</pagename>
+                <pagetype>1</pagetype>
+                          <pagebody><![CDATA[${pageInfo}]]></pagebody>
+                ${apptoken}
+                </qdbapi>`,
+                credentials: "include"
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const xml = await response.text();
+        return xml;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
 async function queryData(dbid, fields, filter, realm, sort = null) {
     try {
         const url = "https://api.quickbase.com/v1/records/query";
