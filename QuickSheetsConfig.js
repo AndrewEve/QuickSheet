@@ -1,5 +1,5 @@
 const quickSheetSchema = {
-    "tableID": "buzibgj77",
+    "tableID": "xxxxxxxxx",
     "fid": {
         "name": "6"
     }
@@ -14,5 +14,5 @@ const quickSheetTabSchema = {
         "tName": "10",
         "ref": "11"
     },
-    "tableID": "buzibjrm3"
+    "tableID": "xxxxxxxxx"
 };
