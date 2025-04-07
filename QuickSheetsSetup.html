@@ -556,7 +556,7 @@ async function saveSchema(){
     currSchema = JSON.parse(JSON.stringify(tempSchema));
     let body = `const quickSheetSchema = ${JSON.stringify(currSchema.quickSheetSchema)};
 
-const quickSheetTabSchema = ${JSON.stringify(currSchema.quickSheetTabSchema)};`;
+    const quickSheetTabSchema = ${JSON.stringify(currSchema.quickSheetTabSchema)};`;
     let appTkn = appToken === undefined ? null : appToken;
     await updateCodePage(appID, realm, body , "QuickSheetsConfig.js", appTkn);
     showSaveEffect();

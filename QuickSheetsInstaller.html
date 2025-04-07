@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>QuickSheets Installer</title>
+        <script>
+                        //Quickbase API calls - needed for installer
+            
+                        const tempTokens = [];
+
+class TimedBoolean {
+    constructor(duration) {
+        this.value = true;
+        setTimeout(() => {
+            this.value = false;
+        }, duration);
+    }
+}
+
+function upsertToken(tkn) {
+    const index = tempTokens.findIndex(obj => obj.id === tkn.id);
+    
+    if (index !== -1) {
+        // Update existing object
+        tempTokens[index] = { ...tempTokens[index], ...tkn };
+    } else {
+        // Add new object
+        tempTokens.push(tkn);
+    }
+}
+
+async function tempToken(dbid, realm) {
+    let existingToken = tempTokens.find(item => item.id === dbid);    
+    if( existingToken !== undefined && existingToken !== null && !existingToken.expired){
+            return existingToken.temporaryAuthorization;
+    }
+    
+    const url = "https://api.quickbase.com/v1/auth/temporary/"+dbid;
+    try {
+        const response = await fetch(url,
+            {
+                method: "GET",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json"
+                },
+                credentials: "include"
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        let tempTkn = {
+            "temporaryAuthorization": json.temporaryAuthorization, 
+            "id": dbid,
+            "expired": new TimedBoolean(240000)
+        };
+        upsertToken(tempTkn);
+        return json.temporaryAuthorization;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function updateCodePage(dbid, realm, pageInfo, pageName, apptoken = null) {
+    try {
+        const url = "https://"+ realm + "/db/"+dbid;
+        apptoken = apptoken === null ? "" : `<apptoken>${apptoken}</apptoken>`;
+        pageInfo = pageInfo.replace(/]]>/g, ']]]]><![CDATA[>');
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/xml",
+                    "QUICKBASE-ACTION": "API_AddReplaceDBPage"
+                },
+                body: `<qdbapi>
+                <pagename>${pageName}</pagename>
+                <pagetype>1</pagetype>
+                        <pagebody><![CDATA[${pageInfo}]]></pagebody>
+                ${apptoken}
+                </qdbapi>`,
+                credentials: "include"
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const xml = await response.text();
+        return xml;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function getDBHTTP(dbid, realm, checkToken = false, apptoken = null) {
+    try {
+        const url = "https://"+ realm + "/db/"+dbid;
+        apptoken = apptoken === null ? "" : `<apptoken>${apptoken}</apptoken>`;
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/xml",
+                    "QUICKBASE-ACTION": "API_GetDBInfo"
+                },
+                body: `<qdbapi>${apptoken}</qdbapi>`,
+                credentials: "include"
+            }
+        );
+        if (!response.ok && !checkToken) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const xml = await response.text();
+        return { "status":response.status, "xml": JSON.stringify(xml)};
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function getApp(dbid, realm, checkPerms) {
+    try {
+        const url = "https://api.quickbase.com/v1/apps/"+dbid;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "GET",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                }
+            }
+        );
+        if (!response.ok && !checkPerms) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return {"status": response.status, json};
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function createTable(dbid, realm, name) {
+    try {
+        const url = "https://api.quickbase.com/v1/tables?appId="+dbid;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                },
+                body: JSON.stringify({
+                    "name": name
+                })
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function createField(dbid, realm, name, type, formula = null) {
+    try {
+        const url = "https://api.quickbase.com/v1/fields?tableId="+dbid;
+        const token = await tempToken(dbid, realm);
+        let body;
+            if(formula === null) {
+                body = JSON.stringify({
+                    "label": name,
+                    "fieldType": type
+                });
+            } else {
+                body = JSON.stringify({
+                    "label": name,
+                    "fieldType": type,
+                    "properties": {
+                        "formula": formula
+                    }
+                });
+            }
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                },
+                body: body
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function createRel(childDB, realm, parentDB, name) {
+    try {
+        const url = "https://api.quickbase.com/v1/tables/"+childDB+"/relationship";
+        const token = await tempToken(childDB, realm);
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                },
+                body: JSON.stringify({
+                    "parentTableId": parentDB,
+                    "foreignKeyField": { "label": name}
+                })
+            }
+        );
+        if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+        
+        </script>
+        <style>
+            /* General layout */
+            .container {
+                display: flex;
+                gap: 20px;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            /* Columns */
+            .column {
+                width: 30%;
+                min-width: 250px;
+                padding: 15px;
+                background: #f9f9f9;
+                border-radius: 10px;
+                box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                align-items: center;
+            }
+
+            .disabled {
+                pointer-events: none;  /* Prevents clicking */
+                opacity: 0.5;          /* Optional: Dim the buttons */
+            }
+
+            /* Report Buttons */
+            .add {
+                padding: 5px 15px;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+                transition: 0.3s;
+                background: #CCCCCC;
+                color: black;
+                align-items: center;  /* Ensure icon is centered */
+                justify-content: center;
+                border-radius: 6px;
+                display: flex;    
+            }
+
+            .add:hover {
+                background: #57db7d;
+            }
+
+            .view {
+                padding: 5px 15px;
+                white-space: nowrap;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+                transition: 0.3s;
+                background: #CCCCCC;
+                color: black;
+                align-items: center;  /* Ensure icon is centered */
+                justify-content: center;
+                border-radius: 6px;
+                display: flex;    
+            }
+
+            .view:hover {
+                background: #fce069;
+            }
+
+            .input-container {
+                display: flex;
+                gap: 0.5rem;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 1rem;
+                max-width: 600px;
+                margin: auto;
+            }
+            
+            .text-input {
+                flex: 1;
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+                border: 2px solid #ccc;
+                border-radius: 8px;
+                transition: border-color 0.2s;
+            }
+            
+            .text-input:focus {
+                outline: none;
+                border-color: #007bff;
+            }
+
+            /* Ordered list styling */
+            ol {
+                padding: 0;
+                list-style: none;
+            }
+
+            ol li {
+                position: relative; /* Ensures the progress bar is positioned relative to the li */
+                padding-top: 25px;
+                background: white;
+                margin: 5px 0;
+                padding-right: 10px;
+                padding-left: 10px;
+                padding-bottom: 10px;
+                border-radius: 6px;
+                font-size: 18px;
+                box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container" id="container"></div>
+        <script>
+
+            const container = document.getElementById("container");
+
+            let appToken = null;
+
+            let quickSheetSchema = {
+                "tableID": "",
+                "fid": {
+                    "name": ""
+                }
+            };
+
+            let quickSheetTabSchema = {
+                "fid": {
+                    "index": "",
+                    "rID":"",
+                    "rName": "",
+                    "tID": "",
+                    "tName": "",
+                    "ref": ""
+                },
+                "tableID": ""
+            };
+
+
+            
+            const appID = window.location.href.split("/")[4].split("?")[0];
+            const realm = window.location.href.split("/")[2];
+
+            const dependencies = [
+                "https://cdn.jsdelivr.net/gh/AndrewEve/QuickSheet@main/QuickSheets.html",
+                "https://cdn.jsdelivr.net/gh/AndrewEve/QuickSheet@main/QuickSheetsStylesheet.css",
+                "https://cdn.jsdelivr.net/gh/AndrewEve/QuickSheet@main/qbAPI.js"  
+            ];
+
+            // 0 - Check App Token requirement?
+
+            async function appTokenCheck() {
+    
+                
+                const appTokenReq = await getApp(appID, realm, true);   
+
+                if((appTokenReq.status).toString()[0] === "4" ){
+                    
+                    let column = document.createElement("div");
+                    column.classList.add("column");
+
+                    let heading = document.createElement("h2");
+                    heading.textContent = "You do not have sufficient permissions in this app to configure extensions"
+
+                    let errorMessage = document.createElement("span");
+                    errorMessage.textContent = "Error Message: "+ appTokenReq.json.message;
+
+                    column.appendChild(heading);
+                    column.appendChild(errorMessage);
+                    container.appendChild(column);
+
+                } else if ( appTokenReq['json']['securityProperties']['enableAppTokens'] ){
+
+                    let column = document.createElement("div");
+                    column.classList.add("column");
+
+                    let heading = document.createElement("h2");
+                    heading.textContent = "Provide Application token OR"
+
+                    let heading2 = document.createElement("h2");
+                    heading2.textContent = "Disable requirement and refresh";
+
+                    let inputCntr = document.createElement("div");
+                    inputCntr.classList.add("input-container");
+                    
+                    let inpt = document.createElement("input");
+                    inpt.placeholder="Enter App Token Here";
+                    inpt.classList.add("text-input");
+
+                    let submitBtn = document.createElement("button");
+                    submitBtn.classList.add("add");
+                    submitBtn.textContent = "Submit";
+                    submitBtn.onclick = async () => {
+
+                        const validToken = await getDBHTTP(appID, realm, true, inpt.value.trim());
+
+                        if((validToken.status).toString()[0] === "4") {
+                            alert("Invalid Application Token, please view tokens and supply a valid Application Token");
+                        } else {
+                            appToken = inpt.value;
+                            await main();
+                        }
+
+                    };
+
+                    let appTknPage = document.createElement("button");
+                    appTknPage.classList.add("view");
+                    appTknPage.textContent = "View Tokens"
+                    appTknPage.onclick = () => {
+
+                        window.open("/db/"+appID+"?a=GetAppDevKey",'_blank');
+
+                    }
+
+                    inputCntr.appendChild(inpt);
+                    inputCntr.appendChild(submitBtn);
+                    inputCntr.appendChild(appTknPage);
+
+                    column.appendChild(heading);
+                    column.appendChild(heading2);
+                    column.appendChild(inputCntr);
+                    container.appendChild(column);
+
+                } else {
+
+                    await main();
+
+                }
+
+
+            }
+
+            window.onload = async () => {
+                await appTokenCheck();
+                
+            };
+
+            // 1 - Create Code pages (QuickSheets.html, stylesheet, api)
+
+            async function getCodePage(pageURL) {
+                try {
+                    const response = await fetch(pageURL,
+                        {
+                            method: "GET"
+                        }
+                    );
+                    if (!response.ok) {
+                    throw new Error(`Response status: ${response.status}`);
+                    }
+
+                    const body = await response.text();
+                    return body;
+                } catch (error) {
+                    console.error(error.message);
+                }
+            }
+
+            async function main(){
+
+                container.innerHTML = "";
+                let body = "";
+                let currURL = "";
+                
+                let steps = [
+                    "Create Code Pages",
+                    "Create Tables",
+                    "Create Fields",
+                    "Create Relationship",
+                    "Create Configuration Page"
+                ];
+
+                let column = document.createElement("div");
+                column.classList.add("column");
+                let heading = document.createElement("h2");
+                heading.textContent = "Installing Extension Components"
+                column.appendChild(heading);
+
+                let orderedList = document.createElement("ol");
+                column.appendChild(orderedList);
+
+                for(let i = 0; i < steps.length; i++) {
+                    const step = document.createElement("li");
+                    step.textContent = steps[i];
+
+                    const stepStatus = document.createElement("span");
+                    stepStatus.textContent = "Pending...";
+                    stepStatus.id = steps[i];
+
+                    step.appendChild(stepStatus);
+                    orderedList.appendChild(step);
+                }
+
+                container.appendChild(column);
+                let currentStep = document.getElementById("Create Code Pages");
+                currentStep.textContent = "Processing";
+
+                for(let i = 0; i < dependencies.length; i++){
+                    currURL = dependencies[i];
+                    body = await getCodePage(currURL);
+                    await updateCodePage(appID,realm,body,currURL.split("/")[6],appToken);
+                }
+
+                
+                currentStep.innerHTML = "\u2705";
+
+                console.log("code pages created!");
+                await createTables();
+                await createFields();
+                await createRels();
+                await createConfig();
+
+                orderedList.innerHTML = "";
+
+                let successInfo = document.createElement("li");
+                successInfo.textContent = "QuickSheets Install was successful!"
+
+                let quickSheetButton = document.createElement("button");
+                quickSheetButton.classList.add("add");
+                quickSheetButton.textContent = "Open QuickSheets";
+                quickSheetButton.onclick = () => {
+                    window.open("/db/"+appID+"?a=dbpage&pagename=QuickSheets.html");
+                }
+                column.removeChild(heading);
+                successInfo.appendChild(quickSheetButton);
+                orderedList.appendChild(successInfo);
+            }         
+            // 2 - Create Tables
+            
+            async function createTables(){   
+                let currentStep = document.getElementById("Create Tables");
+                currentStep.textContent = "Processing";
+
+                const schemaTable = await createTable(appID, realm, "QuickSheet Templates");
+                quickSheetSchema.tableID = schemaTable?.id;
+
+                const schemaTabTable = await createTable(appID, realm, "QuickSheet Template Tabs");
+                quickSheetTabSchema.tableID = schemaTabTable?.id;
+
+                currentStep.innerHTML = "\u2705";
+                console.log("Tables created!");
+            }
+
+            // 3 - Create Fields
+
+            async function createFields(){
+                let currentStep = document.getElementById("Create Fields");
+                currentStep.textContent = "Processing";
+                console.log(quickSheetSchema.tableID);
+                console.log(JSON.stringify(quickSheetSchema));
+                const templateName = await createField(quickSheetSchema.tableID, realm, "Name", "text");
+                quickSheetSchema.fid.name = templateName?.id.toString();
+                
+
+                let tabFields = [
+
+                    { 
+                        "schema": "index",
+                        "name": "index",
+                        "type": "numeric"
+                    },
+                    { 
+                        "schema": "rID",
+                        "name": "Report ID",
+                        "type": "numeric"
+                    },
+                    { 
+                        "schema": "rName",
+                        "name": "Report Name",
+                        "type": "text"                        
+                    },
+                    { 
+                        "schema": "tID",
+                        "name": "Table ID",
+                        "type": "text"                        
+                    },
+                    { 
+                        "schema": "tName",
+                        "name": "Table Name",
+                        "type": "text"
+                    }
+                ];
+
+                let tempName = "";
+                let tempType = "";
+
+                for(let i = 0; i < tabFields.length; i++){
+                    tempName = tabFields[i].name;
+                    tempType = tabFields[i].type;
+                    const tempField = await createField(quickSheetTabSchema.tableID, realm, tempName, tempType);
+                    quickSheetTabSchema.fid[tabFields[i].schema] = tempField?.id.toString();
+                }
+
+                let formula = `var text url = URLRoot()&"db/"&AppID()&"?a=dbpage&pagename=QuickSheets.html&mode=run&rid="&[Record ID#];
+
+var text style = "background-color: #1E88E5; padding: 8px 16px; border: 2px; border-radius: 5px; font-size: 14px; color: white;";
+
+"<a style='"& $style &"' target='_blank' href='" & $url & "'>Run "& [Name] &" Template</a>"`;
+
+                await createField(quickSheetSchema.tableID, realm, "Run QuickSheet Template", "rich-text", formula);
+
+                formula = `var text url = URLRoot()&"db/"&AppID()&"?a=dbpage&pagename=QuickSheets.html&mode=update&rid="&[Record ID#];
+
+var text style = "background-color: #43A047; padding: 8px 16px; border: none; border-radius: 5px; font-size: 14px; color: white;";
+
+"<a style='"& $style &"' target='_blank' href='" & $url & "'>Update "& [Name] &" Template</a>"`;
+
+                await createField(quickSheetSchema.tableID, realm, "Update QuickSheet Template", "rich-text", formula);
+
+                currentStep.innerHTML = "\u2705";
+                console.log("Fields Created!");
+            }
+            // 4 - Create Relationship
+
+            async function createRels(){
+                let currentStep = document.getElementById("Create Relationship");
+                currentStep.textContent = "Processing";
+                const rel = await createRel(quickSheetTabSchema.tableID, realm, quickSheetSchema.tableID, "Related Template");
+                console.log(JSON.stringify(rel));
+                quickSheetTabSchema.fid.ref = rel?.foreignKeyField.id.toString();
+
+                currentStep.innerHTML = "\u2705";
+                console.log("Relationships Created!");
+            }
+
+            // 5 - Create Code pages (config and setup)
+
+            
+            async function createConfig(){
+                let currentStep = document.getElementById("Create Configuration Page");
+                currentStep.textContent = "Processing";
+                body = `const quickSheetSchema = ${JSON.stringify(quickSheetSchema)};
+
+                    const quickSheetTabSchema = ${JSON.stringify(quickSheetTabSchema)};`;
+
+                await updateCodePage(appID, realm, body, "QuickSheetsConfig.js",appToken);
+                
+                body = await getCodePage("https://cdn.jsdelivr.net/gh/AndrewEve/QuickSheet@main/QuickSheetsSetup.html");
+
+                await updateCodePage(appID, realm, body,"QuickSheetsSetup.html",appToken);
+
+                currentStep.innerHTML = "\u2705";
+                console.log("Config Code Pages Created!");
+
+            }
+
+        </script>
+    </body>
+</html>

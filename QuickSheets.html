@@ -363,7 +363,7 @@ async function saveExportReports(updateRid = null){
     const wb = XLSX.utils.book_new(); // Create a new workbook
     let fileName;
     do{
-        fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+        fileName = prompt("Enter a name for the Excel file:", "QuickSheets Export");
         if (fileName === null) {
             document.getElementById("exportButtons").classList.remove("disabled");   
             return;
@@ -467,7 +467,7 @@ async function saveReports(updateRid = null){
     let fileName;
 
     do{
-        fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+        fileName = prompt("Enter a name for the Excel file:", "QuickSheets Export");
         if (fileName === null) {
             document.getElementById("exportButton").classList.remove("disabled");   
             return;
@@ -526,7 +526,7 @@ document.getElementById("exportButton").classList.add("disabled");
 const wb = XLSX.utils.book_new(); // Create a new workbook
 let fileName;
 do{
-    fileName = prompt("Enter a name for the Excel file:", "QuickbaseExport");
+    fileName = prompt("Enter a name for the Excel file:", "QuickSheets Export");
     if (fileName === null) {
         document.getElementById("exportButton").classList.remove("disabled");   
         return;
