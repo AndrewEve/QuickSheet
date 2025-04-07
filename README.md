@@ -3,7 +3,6 @@ This project is meant to help exporting multiple preconfigured Quickbase reports
 The QuickSheets.html page has 3 modes - create (default), run, and update. By loading the code page without a reference to a mode, you will be able to create a new export and save it to dedicated tables in your app. The run mode will export one of your saved templates by referencing a record id in the template table. The update mode will allow you to Export, Save, or Export and Save a template also by referencing a record id in the template table.
 
 The installer will expedite setup of this extension in your application by creating the necessary code pages and tables.
-#TODO - Create Installer
 
 Run Installer with following steps
     Download QuickSheetsInstaller.html
