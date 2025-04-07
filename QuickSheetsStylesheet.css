@@ -63,6 +63,7 @@
 
 .view {
     padding: 5px 15px;
+    white-space: nowrap;
     border: none;
     font-size: 18px;
     cursor: pointer;
@@ -392,3 +393,27 @@ ol li {
 .dropdown-content.show {
   display: block;
 }
+
+.input-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 1rem;
+    max-width: 600px;
+    margin: auto;
+  }
+  
+  .text-input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+  
+  .text-input:focus {
+    outline: none;
+    border-color: #007bff;
+  }

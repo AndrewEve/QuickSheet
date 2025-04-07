@@ -87,6 +87,32 @@ async function updateCodePage(dbid, realm, pageInfo, pageName, apptoken = null) 
     }
 }
 
+async function getDBHTTP(dbid, realm, checkToken = false, apptoken = null) {
+    try {
+        const url = "https://"+ realm + "/db/"+dbid;
+        apptoken = apptoken === null ? "" : `<apptoken>${apptoken}</apptoken>`;
+        const response = await fetch(url,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/xml",
+                    "QUICKBASE-ACTION": "API_GetDBInfo"
+                },
+                body: `<qdbapi>${apptoken}</qdbapi>`,
+                credentials: "include"
+            }
+        );
+        if (!response.ok && !checkToken) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const xml = await response.text();
+        return { "status":response.status, "xml": JSON.stringify(xml)};
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
 async function queryData(dbid, fields, filter, realm, sort = null) {
     try {
         const url = "https://api.quickbase.com/v1/records/query";
@@ -199,6 +225,31 @@ async function getTables(dbid, realm) {
 
         const json = await response.json();
         return json;
+    } catch (error) {
+        console.error(error.message);
+    }
+}
+
+async function getApp(dbid, realm, checkPerms) {
+    try {
+        const url = "https://api.quickbase.com/v1/apps/"+dbid;
+        const token = await tempToken(dbid, realm);
+        const response = await fetch(url,
+            {
+                method: "GET",
+                headers: {
+                    "QB-Realm-Hostname": realm,
+                    "Content-Type": "application/json",
+                    "Authorization": "QB-TEMP-TOKEN " + token
+                }
+            }
+        );
+        if (!response.ok && !checkPerms) {
+        throw new Error(`Response status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        return {"status": response.status, json};
     } catch (error) {
         console.error(error.message);
     }
