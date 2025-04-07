@@ -5,9 +5,13 @@ The QuickSheets.html page has 3 modes - create (default), run, and update. By lo
 The installer will expedite setup of this extension in your application by creating the necessary code pages and tables.
 
 Run Installer with following steps
+
     Download QuickSheetsInstaller.html
+    
     Create Quickbase Code Page called "QuickSheetsSetup.html"
+    
     Copy and paste installer contents into code page
+    
     Open Code page
 
 If you make changes to one of the template tables, this will impact the ability to save and export templates. You can run the QuickSheetsSetup.html code page to reconfigure the setup. This will directly edit the QuickSheetsConfig.js
