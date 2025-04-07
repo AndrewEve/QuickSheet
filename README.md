@@ -1,17 +1,14 @@
-Create a code page for each file in the repository. Name each code page the name of the file. Here is a description of each file
+This project is meant to help exporting multiple preconfigured Quickbase reports from Quickbase to Excel. Kanban Reports are not supported. The QuickSheets.html code page allows the user to select and order reports into their own separate Excel tabs. Once configured to the users liking the reports can be exported in full (>25 MB) to Excel. Users can also save configured Excel exports into templates using 2 dedicated tables. 
 
-quickSheetCreate.html - creates new exports that you can then run and update later
+The QuickSheets.html page has 3 modes - create (default), run, and update. By loading the code page without a reference to a mode, you will be able to create a new export and save it to dedicated tables in your app. The run mode will export one of your saved templates by referencing a record id in the template table. The update mode will allow you to Export, Save, or Export and Save a template also by referencing a record id in the template table.
 
-qbAPI.js - repository of QB api calls for other code pages to reference
+The installer will expedite setup of this extension in your application by creating the necessary code pages and tables.
+#TODO - Create Installer
 
-stylesheet.css - sets visual properties of script
+Run Installer with following steps
+    Download QuickSheetsInstaller.html
+    Create Quickbase Code Page called "QuickSheetsSetup.html"
+    Copy and paste installer contents into code page
+    Open Code page
 
-#TODO - installer.html - will create tables and fields to store exports in app, then it will create code page config.js
-
-config.js = stores the dbids and fids where exports are stored in your app
-
-#TODO - update quickSheetCreate.html to intake a mode - run, update, add(default) 
-    
-    run mode - will export current QuickSheet Template and send user back to their original page
-
-    update mode - will preload QuickSheet Template - option to run and/or run + save (can update export name, export tabs)
+If you make changes to one of the template tables, this will impact the ability to save and export templates. You can run the QuickSheetsSetup.html code page to reconfigure the setup. This will directly edit the QuickSheetsConfig.js
